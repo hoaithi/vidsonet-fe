@@ -96,6 +96,15 @@ export const UserService = {
     );
     return response.data;
   },
+  
+  // Check if user has membership for a channel
+  checkMembership: async (channelId: number): Promise<ApiResponse<boolean>> => {
+    const response = await apiClient.get<ApiResponse<boolean>>(
+      '/memberships/check',
+      { params: { channelId } }
+    );
+    return response.data;
+  },
 
   // Get subscriber count for a channel
   getSubscriberCount: async (channelId: number): Promise<ApiResponse<number>> => {

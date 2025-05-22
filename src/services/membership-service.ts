@@ -30,6 +30,7 @@ export const MembershipService = {
     // Get all membership tiers for a channel
     getChannelMembershipTiers: async (channelId: number): Promise<ApiResponse<MembershipTier[]>> => {
         const response = await apiClient.get<ApiResponse<MembershipTier[]>>(`/memberships/tiers/channel/${channelId}`);
+        console.log('Membership tiers:', response.data);
         return response.data;
     },
 
@@ -69,8 +70,8 @@ export const MembershipService = {
 
     // Capture a payment after PayPal approval
     capturePayment: async (paymentId: string, PayerID: string): Promise<ApiResponse<PaymentCaptureResponse>> => {
-        const response = await apiClient.get<ApiResponse<PaymentCaptureResponse>>('/payments/capture', {
-            params: { paymentId, PayerID }
+        const response = await apiClient.post<ApiResponse<PaymentCaptureResponse>>('/payments/capture', {
+             paymentId, payerID: PayerID 
         });
         return response.data;
     },

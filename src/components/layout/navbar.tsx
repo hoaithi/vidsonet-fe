@@ -16,7 +16,9 @@ import {
   History,
   Users,
   Home,
-  Video
+  Video,
+  FileText,
+  Plus
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -69,9 +71,18 @@ export function Navbar() {
   }, []);
 
   // Handle upload button click
-  const handleUploadClick = () => {
+  const handleVideoUpload = () => {
     if (isAuthenticated) {
       router.push('/upload');
+    } else {
+      router.push('/login');
+    }
+  };
+
+  // Handle post creation
+  const handleCreatePost = () => {
+    if (isAuthenticated) {
+      router.push('/posts');
     } else {
       router.push('/login');
     }
@@ -108,8 +119,28 @@ export function Navbar() {
                       Explore
                     </Link>
                   </Button>
-                  {isAuthenticated && (
+                  
+                  {/* Upload options in mobile menu */}
+                  {isAuthenticated ? (
                     <>
+                      <div className="py-2">
+                        <p className="text-xs font-semibold text-muted-foreground px-2 mb-2">CREATE</p>
+                        <Button variant="ghost" className="w-full justify-start" onClick={handleVideoUpload}>
+                          <Video className="mr-2 h-4 w-4" />
+                          Upload Video
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start" onClick={handleCreatePost}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Create Post
+                        </Button>
+                      </div>
+                      
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/posts">
+                          <FileText className="mr-2 h-4 w-4" />
+                          Posts
+                        </Link>
+                      </Button>
                       <Button variant="ghost" className="w-full justify-start" asChild>
                         <Link href="/subscriptions">
                           <Users className="mr-2 h-4 w-4" />
@@ -129,6 +160,14 @@ export function Navbar() {
                         </Link>
                       </Button>
                     </>
+                  ) : (
+                    <div className="py-2">
+                      <p className="text-xs text-muted-foreground px-2 mb-2">Sign in to upload content</p>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => router.push('/login')}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Sign In to Upload
+                      </Button>
+                    </div>
                   )}
                 </nav>
               </div>
@@ -174,13 +213,27 @@ export function Navbar() {
             <Search className="h-5 w-5" />
           </Button>
           
-          <Button
-            onClick={handleUploadClick}
-            variant="ghost"
-            size="icon"
-          >
-            <Upload className="h-5 w-5" />
-          </Button>
+          {/* Upload Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+              >
+                <Upload className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleVideoUpload}>
+                <Video className="mr-2 h-4 w-4" />
+                <span>Upload Video</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCreatePost}>
+                <FileText className="mr-2 h-4 w-4" />
+                <span>Create Post</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           {isAuthenticated ? (
             <>
@@ -217,6 +270,10 @@ export function Navbar() {
                     <DropdownMenuItem onClick={() => router.push(`/channel/${user?.id}`)}>
                       <UserIcon className="mr-2 h-4 w-4" />
                       <span>Your Channel</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/posts')}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>Your Posts</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => router.push('/settings')}>
                       <Settings className="mr-2 h-4 w-4" />

@@ -43,7 +43,7 @@ export function VideoPlayer({
   const [isLoading, setIsLoading] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [lastProgressUpdate, setLastProgressUpdate] = useState(0);
+  const [hasCompleted, setHasCompleted] = useState(false);
 
   // Initialize player
   useEffect(() => {
@@ -63,11 +63,14 @@ export function VideoPlayer({
       setDuration(video.duration);
       setIsLoading(false);
       
-      // Auto play if enabled
+      // Only autoplay if explicitly enabled via prop
       if (autoPlay) {
-        video.play().catch(() => {
-          // Auto play failed (probably due to browser policy)
+        video.play().then(() => {
+          setIsPlaying(true);
+        }).catch(() => {
+          // Autoplay failed (probably due to browser policy)
           setIsPlaying(false);
+          console.log("Autoplay prevented by browser policy");
         });
       }
     };
@@ -76,25 +79,30 @@ export function VideoPlayer({
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
       
-      // Update progress to backend every 5 seconds
-      if (onProgressUpdate && video.currentTime - lastProgressUpdate >= 5) {
-        onProgressUpdate({
-          currentTime: Math.floor(video.currentTime),
-          duration: Math.floor(video.duration),
-          isCompleted: video.currentTime / video.duration >= 0.9 // Mark as completed if 90% watched
-        });
-        setLastProgressUpdate(video.currentTime);
+      // Check if video is completed (watched more than 90%)
+      if (!hasCompleted && video.duration > 0 && (video.currentTime / video.duration >= 0.9)) {
+        setHasCompleted(true);
       }
+    };
+
+    // Handle play state changes
+    const handlePlay = () => {
+      setIsPlaying(true);
+    };
+
+    const handlePause = () => {
+      setIsPlaying(false);
     };
 
     // Handle video ended
     const handleEnded = () => {
       setIsPlaying(false);
+      setHasCompleted(true);
       
-      // Update progress as completed
+      // Update progress as completed when video ends
       if (onProgressUpdate) {
         onProgressUpdate({
-          currentTime: Math.floor(video.duration),
+          currentTime: 0, // Reset to 0 since video is completed
           duration: Math.floor(video.duration),
           isCompleted: true
         });
@@ -113,19 +121,53 @@ export function VideoPlayer({
     // Add event listeners
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
     video.addEventListener('ended', handleEnded);
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('canplay', handleCanPlay);
+
+    // Add click event listener to toggle play/pause
+    video.addEventListener('click', togglePlay);
 
     // Clean up
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleEnded);
       video.removeEventListener('waiting', handleWaiting);
       video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('click', togglePlay);
     };
-  }, [videoUrl, initialProgress, autoPlay, onProgressUpdate, lastProgressUpdate, volume]);
+  }, [videoUrl, initialProgress, autoPlay, volume, hasCompleted, onProgressUpdate]);
+
+  // Update progress on component unmount or when video changes
+  useEffect(() => {
+    return () => {
+      // Only update if we have a video and onProgressUpdate callback
+      if (videoRef.current && onProgressUpdate && duration > 0) {
+        const video = videoRef.current;
+        
+        // If video is completed (90% or more watched), reset currentTime to 0
+        if (hasCompleted || (video.currentTime / video.duration >= 0.9)) {
+          onProgressUpdate({
+            currentTime: 0, // Reset to 0 for completed videos
+            duration: Math.floor(video.duration),
+            isCompleted: true
+          });
+        } else if (currentTime > 0) {
+          // Otherwise save the current position for resuming later
+          onProgressUpdate({
+            currentTime: Math.floor(video.currentTime),
+            duration: Math.floor(video.duration),
+            isCompleted: false
+          });
+        }
+      }
+    };
+  }, [videoUrl, videoId, onProgressUpdate, currentTime, duration, hasCompleted]);
 
   // Toggle play/pause
   const togglePlay = () => {
@@ -139,8 +181,7 @@ export function VideoPlayer({
         console.error('Error playing video:', error);
       });
     }
-
-    setIsPlaying(!isPlaying);
+    
   };
 
   // Toggle mute
@@ -273,24 +314,27 @@ export function VideoPlayer({
     setPlaybackRate(newRate);
   };
 
+  // Handle video click to toggle play/pause
+  const handleVideoClick = (e: React.MouseEvent) => {
+    // Prevent event bubbling to avoid duplicate toggles
+    e.stopPropagation();
+    togglePlay();
+  };
+
   return (
     <div 
       ref={containerRef}
       className="relative w-full group aspect-video bg-black rounded-lg overflow-hidden"
       onMouseMove={showControlsTemporarily}
-      onClick={(e) => {
-        // Toggle play/pause on container click, unless clicking on controls
-        if (e.target === containerRef.current || e.target === videoRef.current) {
-          togglePlay();
-        }
-      }}
+      onClick={handleVideoClick}
     >
-      {/* Video element */}
+      {/* Video element with click handler */}
       <video
         ref={videoRef}
         src={videoUrl}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-contain cursor-pointer"
         playsInline
+        onClick={handleVideoClick}
       />
       
       {/* Loading overlay */}
@@ -309,12 +353,12 @@ export function VideoPlayer({
       
       {/* Video controls */}
       <div 
-        className={`absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${
+        className={`absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 pointer-events-none ${
           showControls ? 'opacity-100' : 'opacity-0'
         }`}
       >
         {/* Progress bar */}
-        <div className="w-full mb-2">
+        <div className="w-full mb-2 pointer-events-auto">
           <Slider
             value={[currentTime]}
             min={0}
@@ -326,7 +370,7 @@ export function VideoPlayer({
         </div>
         
         {/* Controls row */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pointer-events-auto">
           <div className="flex items-center gap-2">
             {/* Play/Pause button */}
             <button 

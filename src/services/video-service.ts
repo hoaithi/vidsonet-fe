@@ -19,6 +19,7 @@ export const VideoService = {
     }
 
     formData.append('isPremium', data.isPremium.toString());
+    console.log('video file', data.isPremium);
     formData.append('videoFile', data.videoFile);
 
     if (data.thumbnailFile) {

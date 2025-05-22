@@ -24,6 +24,7 @@ export const useMemberships = () => {
             const response = await MembershipService.getChannelMembershipTiers(channelId);
 
             if (response.data) {
+                console.log("membership tier data ", response.data)
                 setMembershipTiers(response.data);
             }
 

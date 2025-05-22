@@ -62,7 +62,7 @@ export default function MainLayout({
       <Navbar />
       <div className="pt-16 md:pl-56">
         <Sidebar />
-        <main className="container py-6">
+        <main className="container py-6 ml-2">
           {children}
         </main>
       </div>

@@ -20,13 +20,14 @@ export default function PaymentSuccessPage() {
     const [channelId, setChannelId] = useState<number | null>(null);
 
     // Get params from URL
-    const paymentId = searchParams.get('paymentId');
+    const paymentId = searchParams.get('token');
     const PayerID = searchParams.get('PayerID');
     const tierId = searchParams.get('tier_id');
 
     // Process the payment
     useEffect(() => {
         const processPayment = async () => {
+            console.log('Processing payment with ID:', paymentId, 'and PayerID:', PayerID);
             if (!isAuthenticated) {
                 router.push('/login');
                 return;
