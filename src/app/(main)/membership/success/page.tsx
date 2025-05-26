@@ -1,3 +1,5 @@
+
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import useMemberships from '@/lib/hooks/use-memberships';
 import { useAuthStore } from '@/store/auth-store';
+import MembershipService from '@/services/membership-service';
 
 export default function PaymentSuccessPage() {
     const { isAuthenticated } = useAuthStore();
@@ -18,6 +21,7 @@ export default function PaymentSuccessPage() {
     const [isProcessing, setIsProcessing] = useState(true);
     const [isSuccess, setIsSuccess] = useState(false);
     const [channelId, setChannelId] = useState<number | null>(null);
+    const [channelName, setChannelName] = useState<string>('');
 
     // Get params from URL
     const paymentId = searchParams.get('token');
@@ -42,10 +46,18 @@ export default function PaymentSuccessPage() {
                 const result = await handlePayPalReturn(paymentId, PayerID);
                 setIsSuccess(result);
 
-                // If we have a tier ID, try to get the channel ID
-                if (tierId) {
-                    // In a real implementation, you'd get the channel ID from the tier
-                    // For now, we'll just navigate to home page
+                // Get channel ID from tier if payment was successful
+                if (result && tierId) {
+                    try {
+                        const tierResponse = await MembershipService.getMembershipTierById(parseInt(tierId));
+                        if (tierResponse.data) {
+                            setChannelId(tierResponse.data.channelId);
+                            setChannelName(tierResponse.data.channelName);
+                        }
+                    } catch (tierError) {
+                        console.error('Error fetching tier information:', tierError);
+                        // Even if we can't get tier info, payment was successful, so continue
+                    }
                 }
             } catch (error) {
                 console.error('Error processing payment:', error);
@@ -80,7 +92,10 @@ export default function PaymentSuccessPage() {
                             <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-2" />
                             <CardTitle className="text-xl">Payment Successful!</CardTitle>
                             <CardDescription>
-                                Thank you for becoming a member
+                                {channelName 
+                                    ? `Thank you for becoming a member of ${channelName}`
+                                    : 'Thank you for becoming a member'
+                                }
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="text-center">
@@ -88,14 +103,35 @@ export default function PaymentSuccessPage() {
                                 Your membership has been activated. You now have access to premium
                                 content and other exclusive benefits.
                             </p>
+                            {channelName && (
+                                <p className="text-sm text-muted-foreground">
+                                    You can now enjoy premium content from {channelName}.
+                                </p>
+                            )}
                         </CardContent>
-                        <CardFooter className="flex justify-center">
-                            <Button asChild>
-                                <Link href={channelId ? `/channel/${channelId}` : "/"}>
-                                    <ArrowLeft className="mr-2 h-4 w-4" />
-                                    {channelId ? "Return to Channel" : "Go to Home Page"}
-                                </Link>
-                            </Button>
+                        <CardFooter className="flex justify-center space-x-2">
+                            {channelId ? (
+                                <>
+                                    <Button asChild>
+                                        <Link href={`/channel/${channelId}`}>
+                                            View Channel
+                                        </Link>
+                                    </Button>
+                                    <Button asChild variant="outline">
+                                        <Link href="/">
+                                            <ArrowLeft className="mr-2 h-4 w-4" />
+                                            Go to Home
+                                        </Link>
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button asChild>
+                                    <Link href="/">
+                                        <ArrowLeft className="mr-2 h-4 w-4" />
+                                        Go to Home Page
+                                    </Link>
+                                </Button>
+                            )}
                         </CardFooter>
                     </>
                 ) : (

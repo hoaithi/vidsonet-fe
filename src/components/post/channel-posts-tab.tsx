@@ -38,7 +38,7 @@ export function ChannelPostsTab({ userId, isOwnChannel = false }: ChannelPostsTa
     };
 
     fetchPosts();
-  }, [userId, getPostsByUserId]);
+  }, [userId]);
 
   // Load more posts
   const loadMorePosts = async () => {

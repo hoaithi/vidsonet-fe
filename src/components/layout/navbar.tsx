@@ -42,8 +42,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { useUser } from '@/lib/hooks/use-user';
+
+
 
 export function Navbar() {
+  
   const { isAuthenticated, user } = useAuthStore();
   const { unreadCount } = useNotificationStore();
   const { logout } = useAuth();
@@ -51,7 +55,7 @@ export function Navbar() {
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
-
+  const isExplorePage = pathname === '/explore';
   // Handle search submit
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,7 +185,7 @@ export function Navbar() {
         </div>
 
         {/* Middle section: Search */}
-        <form
+        {!isExplorePage &&(<form
           onSubmit={handleSearch}
           className="hidden md:flex relative w-full max-w-lg mx-4"
         >
@@ -200,18 +204,19 @@ export function Navbar() {
           >
             <Search className="h-4 w-4" />
           </Button>
-        </form>
+        </form>)}
 
         {/* Right section: Actions */}
         <div className="flex items-center gap-2">
-          <Button
+
+          {!isExplorePage &&(<Button
             variant="ghost"
             size="icon"
             className="relative md:hidden"
             onClick={() => router.push('/explore')}
           >
             <Search className="h-5 w-5" />
-          </Button>
+          </Button>)}
           
           {/* Upload Dropdown */}
           <DropdownMenu>

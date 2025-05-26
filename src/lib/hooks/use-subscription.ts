@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import UserService from '@/services/user-service';
+import { useUser } from './use-user';
+
 
 export const useSubscription = () => {
   const [isLoading, setIsLoading] = useState(false);

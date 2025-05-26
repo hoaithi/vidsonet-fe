@@ -41,7 +41,7 @@ export default function PostDetailPage() {
     if (postId) {
       fetchPost();
     }
-  }, [postId, getPost]);
+  }, [postId]);
 
   // Check if user is post owner
   const isOwner = isAuthenticated && user && post && user.id === post.user.id;

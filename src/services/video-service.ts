@@ -1,5 +1,5 @@
 import apiClient, { ApiResponse } from './api-client';
-import { Video, VideoUpload, VideoUpdateRequest, VideoProgressUpdateRequest, VideoSearchRequest, Comment, CommentCreateRequest } from '@/types/video';
+import { Video, VideoUpload, VideoUpdateRequest, VideoProgressUpdateRequest, VideoSearchRequest, UserReactionStatus, Comment, CommentCreateRequest } from '@/types/video';
 import { PaginatedResponse } from '@/types/api';
 
 export const VideoService = {
@@ -137,5 +137,16 @@ export const VideoService = {
   addComment: async (id: number, data: CommentCreateRequest): Promise<ApiResponse<Comment>> => {
     const response = await apiClient.post<ApiResponse<Comment>>(`/videos/${id}/comments`, data);
     return response.data;
-  }
+  },
+
+  getUserReaction: async (videoId: number, userId?: number): Promise<ApiResponse<{ reactionType?: 'LIKE' | 'DISLIKE'; hasReacted: boolean }>> => {
+    const response = await apiClient.get<ApiResponse<{ reactionType?: 'LIKE' | 'DISLIKE'; hasReacted: boolean }>>(
+      `/videos/${videoId}/reaction`,
+      { 
+        params: { userId } 
+      }
+    );
+    return response.data;
+  },
+
 }

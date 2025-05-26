@@ -88,3 +88,7 @@ export interface Playlist {
   type: 'WATCH_LATER' | 'LIKED_VIDEOS' | 'DISLIKED_VIDEOS' | 'HISTORY' | 'CUSTOM';
   videos?: Video[];
 }
+export interface UserReactionStatus {
+  hasLiked: boolean;
+  hasDisliked: boolean;
+}

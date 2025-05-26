@@ -17,8 +17,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import VideoPlayer from '@/components/video/video-player';
 import CommentList from '@/components/video/comment-list';
-import VideoGrid from '@/components/video/video-grid';
-
 import { useAuthStore } from '@/store/auth-store';
 import { useVideos } from '@/lib/hooks/use-videos';
 import { useSubscription } from '@/lib/hooks/use-subscription';
@@ -30,7 +28,7 @@ export default function VideoDetailPage() {
   const params = useParams();
   const videoId = parseInt(params.id as string);
   const { isAuthenticated, user } = useAuthStore();
-  const { getVideo, likeVideo, dislikeVideo, addToWatchLater } = useVideos();
+  const { getVideo, likeVideo, dislikeVideo, addToWatchLater, userReaction, checkUserReaction, resetUserReaction } = useVideos();
   const { 
     isSubscribed, 
     subscriberCount, 
@@ -48,11 +46,14 @@ export default function VideoDetailPage() {
   useEffect(() => {
     const fetchVideo = async () => {
       setIsLoading(true);
+
       
       try {
         // Get the video details with user ID if logged in
         const userId = isAuthenticated && user ? user.id : undefined;
         const videoData = await getVideo(videoId, userId);
+        resetUserReaction();
+  
         
         if (videoData) {
           setVideo(videoData);
@@ -60,6 +61,9 @@ export default function VideoDetailPage() {
           // Check if user is the video owner
           if (isAuthenticated && user && videoData.user.id === user.id) {
             setIsOwner(true);
+          }
+          if(isAuthenticated && user){
+            await checkUserReaction(videoId, user.id);
           }
           
           // Increment view count
@@ -122,6 +126,7 @@ export default function VideoDetailPage() {
       const response = await likeVideo(videoId);
       if (response) {
         setVideo(response);
+        checkUserReaction(videoId);
       }
     } catch (error) {
       console.error('Error liking video:', error);
@@ -138,6 +143,7 @@ export default function VideoDetailPage() {
       const response = await dislikeVideo(videoId);
       if (response) {
         setVideo(response);
+        checkUserReaction(videoId);
       }
     } catch (error) {
       console.error('Error disliking video:', error);
@@ -249,7 +255,7 @@ export default function VideoDetailPage() {
           <h1 className="text-xl sm:text-2xl font-bold">{video.title}</h1>
           
           <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
-            <span>{formatViewCount(video.viewCount)} views</span>
+            <span>{formatViewCount(video.viewCount)} </span>
             <span>•</span>
             <span>{getRelativeTime(video.publishedAt)}</span>
             
@@ -279,7 +285,7 @@ export default function VideoDetailPage() {
               onClick={handleLike}
               className="flex items-center gap-1"
             >
-              <ThumbsUp className="h-4 w-4" />
+              <ThumbsUp className={`h-4 w-4 ${userReaction.hasLiked? "fill-current":""}`} />
               {video.likeCount > 0 && <span>{video.likeCount}</span>}
             </Button>
             
@@ -289,7 +295,7 @@ export default function VideoDetailPage() {
               onClick={handleDislike}
               className="flex items-center gap-1"
             >
-              <ThumbsDown className="h-4 w-4" />
+              <ThumbsDown className={`h-4 w-4 ${userReaction.hasDisliked? "fill-current":""}`} />
               {video.dislikeCount > 0 && <span>{video.dislikeCount}</span>}
             </Button>
             
@@ -297,7 +303,7 @@ export default function VideoDetailPage() {
               variant="outline"
               size="sm"
               onClick={handleWatchLater}
-              className="flex items-center gap-1"
+              className="flex items-center gap-1" 
             >
               <Clock className="h-4 w-4" />
               <span>Watch Later</span>

@@ -36,6 +36,7 @@ export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState(initialCategoryId);
   const [isPremium, setIsPremium] = useState<boolean | undefined>(undefined);
+  const [durationFilter, setDurationFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState('publishedAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   
@@ -64,12 +65,16 @@ export default function ExplorePage() {
 
   // Initial search based on URL params
   useEffect(() => {
-    if (initialQuery || initialCategoryId) {
+    searchVideos(true);
+  }, []); // Only run on mount
+
+  // Search videos when sort parameters change
+  useEffect(() => {
+    // Don't trigger on initial load (when videos is empty and not loading)
+    if (videos.length > 0 || isLoading) {
       searchVideos(true);
-    } else {
-      searchVideos(true); // Search with default params
     }
-  }, []);
+  }, [sortBy, sortDir, durationFilter]); // Re-search when sort or duration filter changes
 
   // Search videos function
   const searchVideos = async (reset: boolean = false) => {
@@ -86,7 +91,24 @@ export default function ExplorePage() {
       }, page, 10, sortBy, sortDir);
       
       if (response.data) {
-        const newVideos = response.data.content;
+        let newVideos = response.data.content;
+        
+        // Apply duration filter on frontend since backend doesn't support it
+        if (durationFilter !== 'all') {
+          newVideos = newVideos.filter(video => {
+            const duration = video.duration; // duration in seconds
+            switch (durationFilter) {
+              case 'short': // Under 4 minutes
+                return duration < 240;
+              case 'medium': // 4-20 minutes
+                return duration >= 240 && duration <= 1200;
+              case 'long': // Over 20 minutes
+                return duration > 1200;
+              default:
+                return true;
+            }
+          });
+        }
         
         // Update videos list
         if (reset) {
@@ -97,8 +119,8 @@ export default function ExplorePage() {
           setCurrentPage(page + 1);
         }
         
-        setTotalVideos(response.data.totalElements);
-        setHasMore(!response.data.last);
+        setTotalVideos(newVideos.length); // Update with filtered count
+        setHasMore(!response.data.last && newVideos.length > 0);
       }
     } catch (error) {
       console.error('Error searching videos:', error);
@@ -129,6 +151,23 @@ export default function ExplorePage() {
     window.history.pushState({}, '', url.toString());
   };
 
+  // Handle sort by change
+  const handleSortByChange = (value: string) => {
+    setSortBy(value);
+    // Note: The useEffect will handle the re-search
+  };
+
+  // Handle sort direction toggle
+  const handleSortDirToggle = () => {
+    setSortDir(current => current === 'asc' ? 'desc' : 'asc');
+    // Note: The useEffect will handle the re-search
+  };
+
+  // Handle filter apply (for the sheet)
+  const handleApplyFilters = () => {
+    searchVideos(true);
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Explore Videos</h1>
@@ -149,7 +188,7 @@ export default function ExplorePage() {
         </form>
         
         <div className="flex gap-2">
-          <Select value={sortBy} onValueChange={setSortBy}>
+          <Select value={sortBy} onValueChange={handleSortByChange}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
@@ -163,7 +202,7 @@ export default function ExplorePage() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
+            onClick={handleSortDirToggle}
             title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
           >
             {sortDir === 'asc' ? '↑' : '↓'}
@@ -188,14 +227,16 @@ export default function ExplorePage() {
                 <div className="space-y-2">
                   <h3 className="text-sm font-medium">Category</h3>
                   <Select 
-                    value={selectedCategory} 
-                    onValueChange={setSelectedCategory}
+                    value={selectedCategory || "all"} 
+                    onValueChange={(value) => {
+                      setSelectedCategory(value === "all" ? "" : value);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Categories</SelectItem>
+                      <SelectItem value="all">All Categories</SelectItem>
                       {categories.map((category) => (
                         <SelectItem key={category.id} value={category.id.toString()}>
                           {category.name}
@@ -208,11 +249,31 @@ export default function ExplorePage() {
                 <Separator />
                 
                 <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Video Duration</h3>
+                  <Select 
+                    value={durationFilter} 
+                    onValueChange={setDurationFilter}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Any duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any Duration</SelectItem>
+                      <SelectItem value="short">Short (Under 4 minutes)</SelectItem>
+                      <SelectItem value="medium">Medium (4-20 minutes)</SelectItem>
+                      <SelectItem value="long">Long (Over 20 minutes)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
                   <h3 className="text-sm font-medium">Premium Content</h3>
                   <Select 
-                    value={isPremium === undefined ? '' : isPremium.toString()} 
+                    value={isPremium === undefined ? 'all' : isPremium.toString()} 
                     onValueChange={(value) => {
-                      if (value === '') {
+                      if (value === 'all') {
                         setIsPremium(undefined);
                       } else {
                         setIsPremium(value === 'true');
@@ -223,7 +284,7 @@ export default function ExplorePage() {
                       <SelectValue placeholder="Premium status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Videos</SelectItem>
+                      <SelectItem value="all">All Videos</SelectItem>
                       <SelectItem value="true">Premium Only</SelectItem>
                       <SelectItem value="false">Free Videos</SelectItem>
                     </SelectContent>
@@ -231,9 +292,7 @@ export default function ExplorePage() {
                 </div>
                 
                 <div className="pt-4">
-                  <Button onClick={() => {
-                    searchVideos(true);
-                  }} className="w-full">
+                  <Button onClick={handleApplyFilters} className="w-full">
                     Apply Filters
                   </Button>
                 </div>

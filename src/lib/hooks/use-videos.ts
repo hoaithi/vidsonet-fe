@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { useVideoStore } from '@/store/video-store';
 import { VideoService } from '@/services/video-service';
 import { VideoSearchRequest, VideoUpload, VideoUpdateRequest, VideoProgressUpdateRequest } from '@/types/video';
-
+import { UserReactionStatus } from '@/types/video';
 export const useVideos = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any>(null);
@@ -226,9 +226,34 @@ export const useVideos = () => {
     }
   };
 
+  
+  const [userReaction, setUserReaction] = useState<UserReactionStatus>({hasLiked:false,hasDisliked:false});
+  const checkUserReaction = async (videoId: number, userId?: number) => {
+      const response = await VideoService.getUserReaction(videoId, userId);
+      if(response.data&&response.data.hasReacted){
+        setUserReaction({
+          hasLiked: response.data.reactionType === "LIKE",
+          hasDisliked: response.data.reactionType === "DISLIKE"
+        })
+      }else{
+        setUserReaction({
+          hasDisliked:false,
+          hasLiked:false
+        })
+      }
+
+  }
+  const resetUserReaction = () => {
+    setUserReaction({
+      hasDisliked:false,
+      hasLiked: false
+    })
+  }
+
   return {
     isLoading,
     searchResults,
+    userReaction,
     searchVideos,
     uploadVideo,
     getVideo,
@@ -239,5 +264,7 @@ export const useVideos = () => {
     getWatchLaterVideos,
     updateVideo,
     deleteVideo,
+    checkUserReaction,
+    resetUserReaction
   };
 };

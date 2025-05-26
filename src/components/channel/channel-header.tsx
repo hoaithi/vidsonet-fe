@@ -28,14 +28,6 @@ export function ChannelHeader({ channel }: ChannelHeaderProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const isOwnChannel = isAuthenticated && user?.id === channel.id;
 
-  // Check subscription status when component mounts
-  // useState(() => {
-  //   if (isAuthenticated && channel.id && !isOwnChannel) {
-  //     useSubscription().checkSubscription(channel.id);
-  //     useSubscription().getSubscriberCount(channel.id);
-  //   }
-  // });
-  // Sử dụng useEffect thay vì useState
   useEffect(() => {
     if (isAuthenticated && channel.id && !isOwnChannel) {
       checkSubscription(channel.id);
