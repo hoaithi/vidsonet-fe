@@ -88,7 +88,7 @@ export default function ExplorePage() {
         keyword: searchQuery || undefined,
         categoryId: selectedCategory ? parseInt(selectedCategory) : undefined,
         isPremium: isPremium,
-      }, page, 10, sortBy, sortDir);
+      }, page, 3, sortBy, sortDir);
       
       if (response.data) {
         let newVideos = response.data.content;

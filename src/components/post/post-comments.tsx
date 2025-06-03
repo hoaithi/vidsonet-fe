@@ -427,7 +427,7 @@ export function PostComments({ postId, isPostOwner = false }: PostCommentsProps)
   // Load comments on mount
   useEffect(() => {
     getPostComments(postId);
-  }, [postId, getPostComments]);
+  }, [postId]);
 
   // Main comment form
   const commentForm = useForm<z.infer<typeof commentSchema>>({
