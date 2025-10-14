@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/auth-store';
+import Sidebar from '@/components/layout/sidebar';
 
 export default function AuthLayout({
   children,
@@ -27,7 +28,7 @@ export default function AuthLayout({
           VidsoNet
         </Link>
       </header>
-      
+      <Sidebar />      
       <main className="flex-1 flex items-center justify-center p-6">
         {children}
       </main>

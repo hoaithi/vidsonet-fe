@@ -12,7 +12,9 @@ import {
   History, 
   ChevronRight, 
   ChevronLeft,
-  FileText
+  FileText,
+  CircleChevronLeft,
+  CircleChevronRight
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -83,7 +85,7 @@ export function Sidebar() {
           onClick={toggleCollapse}
           aria-label={isCollapsed ? 'Expand' : 'Collapse'}
         >
-          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          {isCollapsed ? <CircleChevronLeft  className="h-4 w-4" /> : <CircleChevronRight className="h-4 w-4" />}
         </Button>
       </div>
       
@@ -92,7 +94,7 @@ export function Sidebar() {
           <nav className="space-y-1">
             <Button
               variant={isActive('/') ? 'secondary' : 'ghost'}
-              className={`w-full justify-start ${isCollapsed ? 'justify-center px-0' : ''}`}
+              className={`w-full justify-start ${isCollapsed? 'justify-center px-0' : ''}`}
               asChild
             >
               <Link href="/">

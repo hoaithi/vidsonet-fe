@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { loginSchema, registerSchema } from '../../lib/validation';
+import { loginSchema, registerSchema } from '@/lib/validation';
 
 interface AuthFormProps {
   type: 'login' | 'register';

@@ -143,31 +143,63 @@ export function VideoPlayer({
     };
   }, [videoUrl, initialProgress, autoPlay, volume, hasCompleted, onProgressUpdate]);
 
+
+const lastTimeRef = useRef(0);
+
+// Cập nhật ref mỗi khi video chạy
+useEffect(() => {
+  const video = videoRef.current;
+  if (!video) return;
+
+  const handleTimeUpdate = () => {
+    lastTimeRef.current = video.currentTime;
+    setCurrentTime(video.currentTime);
+
+    if (!hasCompleted && video.duration > 0 && video.currentTime / video.duration >= 0.9) {
+      setHasCompleted(true);
+    }
+  };
+
+  video.addEventListener("timeupdate", handleTimeUpdate);
+  return () => video.removeEventListener("timeupdate", handleTimeUpdate);
+}, [hasCompleted]);
+
+
+
+
   // Update progress on component unmount or when video changes
   useEffect(() => {
-    return () => {
-      // Only update if we have a video and onProgressUpdate callback
-      if (videoRef.current && onProgressUpdate && duration > 0) {
-        const video = videoRef.current;
-        
-        // If video is completed (90% or more watched), reset currentTime to 0
-        if (hasCompleted || (video.currentTime / video.duration >= 0.9)) {
-          onProgressUpdate({
-            currentTime: 0, // Reset to 0 for completed videos
-            duration: Math.floor(video.duration),
-            isCompleted: true
-          });
-        } else if (currentTime > 0) {
-          // Otherwise save the current position for resuming later
-          onProgressUpdate({
-            currentTime: Math.floor(video.currentTime),
-            duration: Math.floor(video.duration),
-            isCompleted: false
-          });
-        }
+  const handleBeforeUnload = () => {
+    if (videoRef.current && onProgressUpdate && duration > 0) {
+      const video = videoRef.current;
+      const lastTime = lastTimeRef.current;
+
+      if (hasCompleted || (lastTime / video.duration >= 0.9)) {
+        onProgressUpdate({
+          currentTime: 0,
+          duration: Math.floor(video.duration),
+          isCompleted: true,
+        });
+      } else if (lastTime > 0) {
+        onProgressUpdate({
+          currentTime: Math.floor(lastTime),
+          duration: Math.floor(video.duration),
+          isCompleted: false,
+        });
       }
-    };
-  }, [videoUrl, videoId, onProgressUpdate, currentTime, duration, hasCompleted]);
+    }
+  };
+
+  // Gọi khi user reload hoặc đóng tab
+  window.addEventListener("beforeunload", handleBeforeUnload);
+
+  return () => {
+    // Cleanup khi component unmount
+    handleBeforeUnload();
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+  };
+}, [videoUrl, videoId, onProgressUpdate, duration, hasCompleted]);
+
 
   // Toggle play/pause
   const togglePlay = () => {
