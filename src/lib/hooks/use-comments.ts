@@ -4,22 +4,22 @@ import {VideoService} from '@/services/video-service';
 import CommentService from '@/services/comment-service';
 import { CommentCreateRequest, CommentUpdateRequest } from '@/types/video';
 
-export const useComments = (videoId?: number) => {
+export const useComments = (videoId?: string) => {
   const [isLoading, setIsLoading] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
 
   // Get video comments
-  const getVideoComments = async (id: number = videoId || 0) => {
+  const getVideoComments = async (id: string = videoId || '') => {
     setIsLoading(true);
     
     try {
       const response = await VideoService.getVideoComments(id);
       
-      if (response.data) {
-        setComments(response.data);
+      if (response.result) {
+        setComments(response.result);
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get video comments error:', error);
       
@@ -38,15 +38,15 @@ export const useComments = (videoId?: number) => {
     setIsLoading(true);
     
     try {
-      const response = await VideoService.addComment(data.videoId, data);
+      const response = await VideoService.addComment(data.itemId, data);
       
-      if (response.data) {
+      if (response.result) {
         // Update comments list
-        setComments((prev) => [response.data, ...prev]);
+        setComments((prev) => [response.result, ...prev]);
       }
       
       toast.success('Comment added successfully');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Add comment error:', error);
       
@@ -61,10 +61,10 @@ export const useComments = (videoId?: number) => {
   };
 
   // Get comment replies
-  const getCommentReplies = async (commentId: number) => {
+  const getCommentReplies = async (commentId: string) => {
     try {
       const response = await CommentService.getCommentReplies(commentId);
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get comment replies error:', error);
       
@@ -77,13 +77,13 @@ export const useComments = (videoId?: number) => {
   };
 
   // Reply to comment
-  const replyToComment = async (commentId: number, content: string) => {
+  const replyToComment = async (commentId: string, content: string) => {
     setIsLoading(true);
     
     try {
       const response = await CommentService.replyToComment(commentId, content);
       
-      if (response.data) {
+      if (response.result) {
         // Update comments list by adding reply to the parent comment
         setComments((prev) => 
           prev.map((comment) => {
@@ -92,7 +92,7 @@ export const useComments = (videoId?: number) => {
               const replies = comment.replies || [];
               return {
                 ...comment,
-                replies: [...replies, response.data]
+                replies: [...replies, response.result]
               };
             }
             return comment;
@@ -101,7 +101,7 @@ export const useComments = (videoId?: number) => {
       }
       
       toast.success('Reply added successfully');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Reply to comment error:', error);
       
@@ -116,23 +116,23 @@ export const useComments = (videoId?: number) => {
   };
 
   // Update comment
-  const updateComment = async (commentId: number, data: CommentUpdateRequest) => {
+  const updateComment = async (commentId: string, data: CommentUpdateRequest) => {
     setIsLoading(true);
     
     try {
       const response = await CommentService.updateComment(commentId, data);
       
       // Update comments list
-      if (response.data) {
+      if (response.result) {
         setComments((prev) => 
           prev.map((comment) => {
             if (comment.id === commentId) {
-              return response.data;
+              return response.result;
             }
             // Check if the comment is in replies of another comment
             if (comment.replies) {
               const updatedReplies = comment.replies.map((reply: any) => 
-                reply.id === commentId ? response.data : reply
+                reply.id === commentId ? response.result : reply
               );
               return {
                 ...comment,
@@ -145,7 +145,7 @@ export const useComments = (videoId?: number) => {
       }
       
       toast.success('Comment updated successfully');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Update comment error:', error);
       
@@ -160,7 +160,7 @@ export const useComments = (videoId?: number) => {
   };
 
   // Delete comment
-  const deleteComment = async (commentId: number) => {
+  const deleteComment = async (commentId: string) => {
     setIsLoading(true);
     
     try {
@@ -203,21 +203,21 @@ export const useComments = (videoId?: number) => {
   };
 
   // Heart comment
-  const heartComment = async (commentId: number) => {
+  const heartComment = async (commentId: string) => {
     try {
       const response = await CommentService.heartComment(commentId);
       
       // Update comments list
-      if (response.data) {
+      if (response.result) {
         setComments((prev) =>
           prev.map((comment) => {
             if (comment.id === commentId) {
-              return response.data;
+              return response.result;
             }
             // Check if the comment is in replies of another comment
             if (comment.replies) {
               const updatedReplies = comment.replies.map((reply: any) => 
-                reply.id === commentId ? response.data : reply
+                reply.id === commentId ? response.result : reply
               );
               return {
                 ...comment,
@@ -230,7 +230,7 @@ export const useComments = (videoId?: number) => {
       }
       
       toast.success('Comment hearted');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Heart comment error:', error);
       
@@ -243,21 +243,21 @@ export const useComments = (videoId?: number) => {
   };
 
   // Unheart comment
-  const unheartComment = async (commentId: number) => {
+  const unheartComment = async (commentId: string) => {
     try {
       const response = await CommentService.unheartComment(commentId);
       
       // Update comments list
-      if (response.data) {
+      if (response.result) {
         setComments((prev) =>
           prev.map((comment) => {
             if (comment.id === commentId) {
-              return response.data;
+              return response.result;
             }
             // Check if the comment is in replies of another comment
             if (comment.replies) {
               const updatedReplies = comment.replies.map((reply: any) => 
-                reply.id === commentId ? response.data : reply
+                reply.id === commentId ? response.result : reply
               );
               return {
                 ...comment,
@@ -270,7 +270,7 @@ export const useComments = (videoId?: number) => {
       }
       
       toast.success('Comment unhearted');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Unheart comment error:', error);
       
@@ -283,12 +283,12 @@ export const useComments = (videoId?: number) => {
   };
 
   // Pin comment
-  const pinComment = async (commentId: number) => {
+  const pinComment = async (commentId: string) => {
     try {
       const response = await CommentService.pinComment(commentId);
       
       // Update comments list
-      if (response.data) {
+      if (response.result) {
         // First, unpin all other comments
         const updatedComments = comments.map((comment) => ({
           ...comment,
@@ -298,13 +298,13 @@ export const useComments = (videoId?: number) => {
         // Then, pin the selected comment
         setComments(
           updatedComments.map((comment) =>
-            comment.id === commentId ? response.data : comment
+            comment.id === commentId ? response.result : comment
           )
         );
       }
       
       toast.success('Comment pinned successfully');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Pin comment error:', error);
       
@@ -317,21 +317,21 @@ export const useComments = (videoId?: number) => {
   };
 
   // Unpin comment
-  const unpinComment = async (commentId: number) => {
+  const unpinComment = async (commentId: string) => {
     try {
       const response = await CommentService.unpinComment(commentId);
       
       // Update comments list
-      if (response.data) {
+      if (response.result) {
         setComments((prev) =>
           prev.map((comment) =>
-            comment.id === commentId ? response.data : comment
+            comment.id === commentId ? response.result : comment
           )
         );
       }
       
       toast.success('Comment unpinned successfully');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Unpin comment error:', error);
       

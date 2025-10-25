@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import UserService from '@/services/user-service';
+import UserService from '@/services/profile-service';
 import { useAuthStore } from '@/store/auth-store';
-import { UpdateProfileRequest, User } from '@/types/user';
+import { UpdateProfileRequest, Profile } from '@/types/profile';
 
 export const useUser = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [channelInfo, setChannelInfo] = useState<User | null>(null);
-  const { user, updateUser } = useAuthStore();
+  const [channelInfo, setChannelInfo] = useState<Profile | null>(null);
+  const { profile, updateProfile } = useAuthStore();
 
   // Get current user
   const getCurrentUser = async () => {
@@ -16,11 +16,11 @@ export const useUser = () => {
     try {
       const response = await UserService.getCurrentUser();
       
-      if (response.data) {
-        updateUser(response.data);
+      if (response.result) {
+        updateProfile(response.result);
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get current user error:', error);
       
@@ -35,12 +35,12 @@ export const useUser = () => {
   };
 
   // Get user by ID
-  const getUserById = async (id: number) => {
+  const getUserById = async (id: string) => {
     setIsLoading(true);
     
     try {
       const response = await UserService.getUserById(id);
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get user error:', error);
       
@@ -55,17 +55,17 @@ export const useUser = () => {
   };
 
   // Get channel by user ID
-  const getChannelByUserId = async (id: number) => {
+  const getChannelByUserId = async (id: string) => {
     setIsLoading(true);
     
     try {
       const response = await UserService.getChannelByUserId(id);
       
-      if (response.data) {
-        setChannelInfo(response.data);
+      if (response.result) {
+        setChannelInfo(response.result);
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get channel error:', error);
       
@@ -80,24 +80,24 @@ export const useUser = () => {
   };
 
   // Update profile
-  const updateProfile = async (data: UpdateProfileRequest) => {
-    if (!user) return null;
+  const updateProfileUser = async (data: UpdateProfileRequest) => {
+    if (!profile) return null;
     
     setIsLoading(true);
     
     try {
-      const response = await UserService.updateProfile(user.id, data);
+      const response = await UserService.updateProfile(profile.id, data);
       
-      if (response.data) {
-        updateUser(response.data);
+      if (response.result) {
+        updateProfile(response.result);
         
-        if (channelInfo && channelInfo.id === user.id) {
-          setChannelInfo(response.data);
+        if (channelInfo && channelInfo.id === profile.id) {
+          setChannelInfo(response.result);
         }
       }
       
       toast.success('Profile updated successfully');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Update profile error:', error);
       
@@ -117,7 +117,7 @@ export const useUser = () => {
     
     try {
       const response = await UserService.getUserSubscriptions();
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get subscriptions error:', error);
       

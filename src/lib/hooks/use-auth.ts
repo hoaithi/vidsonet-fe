@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { LoginRequest, RegisterRequest } from '@/types/auth';
 import { useAuthStore } from '@/store/auth-store';
 import AuthService from '@/services/auth-service';
-import UserService from '@/services/user-service';
+import UserService from '@/services/profile-service';
 import { getLocalStorage, setLocalStorage, removeLocalStorage } from '@/lib/utils';
 
 export const useAuth = () => {
@@ -19,15 +19,15 @@ export const useAuth = () => {
     try {
       const response = await AuthService.login(data);
       console.log("response", response);
-      if (response.data) {
-        setLocalStorage('accessToken', (response.data.accessToken));
-        setLocalStorage('refreshToken', (response.data.refreshToken));
+      if (response.result) {
+        setLocalStorage('accessToken', (response.result.accessToken));
+        setLocalStorage('refreshToken', (response.result.refreshToken));
         // Get user data
         const userResponse = await UserService.getCurrentUser();
         
-        if (userResponse.data) {
+        if (userResponse.result) {
           // Save auth data and user info
-          setAuth(response.data, userResponse.data);
+          setAuth(response.result, userResponse.result);
           
           toast.success('Logged in successfully');
           router.push('/');

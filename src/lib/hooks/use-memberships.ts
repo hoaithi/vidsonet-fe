@@ -17,18 +17,18 @@ export const useMemberships = () => {
     const router = useRouter();
 
     // Get membership tiers for a channel
-    const getChannelMembershipTiers = async (channelId: number) => {
+    const getChannelMembershipTiers = async (channelId: string) => {
         setIsLoading(true);
 
         try {
             const response = await MembershipService.getChannelMembershipTiers(channelId);
 
-            if (response.data) {
-                console.log("membership tier data ", response.data)
-                setMembershipTiers(response.data);
+            if (response.result) {
+                console.log("membership tier data ", response.result)
+                setMembershipTiers(response.result);
             }
 
-            return response.data || [];
+            return response.result || [];
         } catch (error: any) {
             console.error('Error fetching membership tiers:', error);
 
@@ -49,12 +49,12 @@ export const useMemberships = () => {
         try {
             const response = await MembershipService.createMembershipTier(data);
 
-            if (response.data) {
-                setMembershipTiers(prev => [...prev, response.data as MembershipTier]);
+            if (response.result) {
+                setMembershipTiers(prev => [...prev, response.result as MembershipTier]);
                 toast.success('Membership tier created successfully');
             }
 
-            return response.data;
+            return response.result;
         } catch (error: any) {
             console.error('Error creating membership tier:', error);
 
@@ -69,20 +69,20 @@ export const useMemberships = () => {
     };
 
     // Update a membership tier
-    const updateMembershipTier = async (tierId: number, data: MembershipTierUpdateRequest) => {
+    const updateMembershipTier = async (tierId: string, data: MembershipTierUpdateRequest) => {
         setIsLoading(true);
 
         try {
             const response = await MembershipService.updateMembershipTier(tierId, data);
 
-            if (response.data) {
+            if (response.result) {
                 setMembershipTiers(prev =>
-                    prev.map(tier => tier.id === tierId ? response.data as MembershipTier : tier)
+                    prev.map(tier => tier.id === tierId ? response.result as MembershipTier : tier)
                 );
                 toast.success('Membership tier updated successfully');
             }
 
-            return response.data;
+            return response.result;
         } catch (error: any) {
             console.error('Error updating membership tier:', error);
 
@@ -97,7 +97,7 @@ export const useMemberships = () => {
     };
 
     // Delete a membership tier
-    const deleteMembershipTier = async (tierId: number) => {
+    const deleteMembershipTier = async (tierId: string) => {
         setIsLoading(true);
 
         try {
@@ -126,11 +126,11 @@ export const useMemberships = () => {
         try {
             const response = await MembershipService.getUserMemberships();
 
-            if (response.data) {
-                setMemberships(response.data);
+            if (response.result) {
+                setMemberships(response.result);
             }
 
-            return response.data || [];
+            return response.result || [];
         } catch (error: any) {
             console.error('Error fetching user memberships:', error);
 
@@ -145,17 +145,17 @@ export const useMemberships = () => {
     };
 
     // Get channel members
-    const getChannelMembers = async (channelId: number) => {
+    const getChannelMembers = async (channelId: string) => {
         setIsLoading(true);
 
         try {
             const response = await MembershipService.getChannelMembers(channelId);
 
-            if (response.data) {
-                setMemberships(response.data);
+            if (response.result) {
+                setMemberships(response.result);
             }
 
-            return response.data || [];
+            return response.result || [];
         } catch (error: any) {
             console.error('Error fetching channel members:', error);
 
@@ -170,15 +170,15 @@ export const useMemberships = () => {
     };
 
     // Check if user is a member of a channel
-    const checkChannelMembership = async (channelId: number) => {
+    const checkChannelMembership = async (channelId: string) => {
         try {
             const response = await MembershipService.checkMembership(channelId);
 
-            if (response.data !== undefined) {
-                setIsMember(response.data);
+            if (response.result !== undefined) {
+                setIsMember(response.result);
             }
 
-            return response.data || false;
+            return response.result || false;
         } catch (error: any) {
             console.error('Error checking membership:', error);
             return false;
@@ -186,15 +186,15 @@ export const useMemberships = () => {
     };
 
     // Subscribe to a membership tier
-    const subscribeToTier = async (tierId: number) => {
+    const subscribeToTier = async (tierId: string) => {
         setIsLoading(true);
 
         try {
             const response = await MembershipService.createPayment(tierId);
 
-            if (response.data && response.data.approvalUrl) {
+            if (response.result && response.result.approvalUrl) {
                 // Redirect to PayPal approval page
-                window.location.href = response.data.approvalUrl;
+                window.location.href = response.result.approvalUrl;
                 return true;
             } else {
                 toast.error('Failed to create payment. Please try again.');
@@ -220,7 +220,7 @@ export const useMemberships = () => {
         try {
             const response = await MembershipService.capturePayment(paymentId, PayerID);
 
-            if (response.data && response.data.success) {
+            if (response.result && response.result.success) {
                 toast.success('Payment completed successfully! You are now a member.');
                 return true;
             } else {
@@ -231,7 +231,7 @@ export const useMemberships = () => {
             console.error('Error capturing payment:', error);
 
             toast.error(
-                error.response?.data?.message ||
+                error.response?.result?.message ||
                 'Failed to complete payment. Please try again.'
             );
             return false;

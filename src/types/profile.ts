@@ -1,14 +1,13 @@
-export interface User {
-    id: number;
-    username: string;
+export interface Profile {
+    id: string;
+    userId?: string;
     email?: string;
-    profilePicture?: string;
-    createdAt?: string;
-    channelName?: string;
-    channelDescription?: string;
-    channelPicture?: string;
-    bannerImage?: string;
+    avatarUrl?: string;
+    bannerUrl?: string;
+    fullName?: string;
+    description?: string;
     subscriberCount?: number;
+    createdAt?: string;
   }
   
   export interface UpdateProfileRequest {
@@ -25,5 +24,5 @@ export interface User {
     id: number;
     subscribedAt: string;
     notificationEnabled: boolean;
-    channel: User;
+    channel: Profile;
   }

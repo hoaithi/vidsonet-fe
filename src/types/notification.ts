@@ -1,4 +1,4 @@
-import { User } from './user';
+import { Profile } from './profile';
 
 export type NotificationType = 
   | 'VIDEO_LIKE'
@@ -34,5 +34,5 @@ export interface Notification {
   content: string;
   entityId: number;
   entityType: EntityType;
-  actor: User;
+  actor: Profile;
 }

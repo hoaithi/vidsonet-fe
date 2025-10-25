@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import VideoGrid from '@/components/video/video-grid';
 import { useAuthStore } from '@/store/auth-store';
 import { Video } from '@/types/video';
-import { Subscription } from '@/types/user';
-import UserService from '@/services/user-service';
+import { Subscription } from '@/types/profile';
+import UserService from '@/services/profile-service';
 import {VideoService} from '@/services/video-service';
 
 export default function SubscriptionsPage() {
@@ -36,11 +36,11 @@ export default function SubscriptionsPage() {
       try {
         // Get user subscriptions
         const subscriptionsResponse = await UserService.getUserSubscriptions();
-        if (subscriptionsResponse.data) {
-          setSubscriptions(subscriptionsResponse.data);
+        if (subscriptionsResponse.result) {
+          setSubscriptions(subscriptionsResponse.result);
           
           // Get channel IDs
-          const channelIds = subscriptionsResponse.data.map(sub => sub.channel.id);
+          const channelIds = subscriptionsResponse.result.map(sub => sub.channel.id);
           
           // If there are subscriptions, fetch videos from those channels
           if (channelIds.length > 0) {
@@ -49,12 +49,11 @@ export default function SubscriptionsPage() {
             // For simplicity, fetch videos from each channel separately
             // In a real app, you might want a backend endpoint that can fetch from multiple channels at once
             for (const channelId of channelIds) {
-              const videosResponse = await VideoService.searchVideos({ 
-                userId: channelId 
-              }, 0, 5); // Limit to 5 videos per channel
+              if (!channelId) return
+              const videosResponse = await VideoService.getVideosByChannelId(channelId); // Limit to 5 videos per channel
               
-              if (videosResponse.data && videosResponse.data.content) {
-                allVideos = [...allVideos, ...videosResponse.data.content];
+              if (videosResponse.result && videosResponse.result.content) {
+                allVideos = [...allVideos, ...videosResponse.result.content];
               }
             }
             

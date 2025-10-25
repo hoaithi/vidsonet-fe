@@ -10,15 +10,15 @@ import PostCard from '@/components/post/post-card';
 import PostForm from '@/components/post/post-form';
 import { useAuthStore } from '@/store/auth-store';
 import { usePosts } from '@/lib/hooks/use-posts';
-import UserService from '@/services/user-service';
+import UserService from '@/services/profile-service';
 import { Post } from '@/types/post';
-import { Subscription } from '@/types/user';
+import { Subscription } from '@/types/profile';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import PostService from '@/services/post-service';
 
 export default function PostsFeedPage() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
   const router = useRouter();
   const { createPost } = usePosts(); // Only use createPost from the hook
   const [showPostForm, setShowPostForm] = useState(false);
@@ -30,7 +30,7 @@ export default function PostsFeedPage() {
   const [userPostsLoading, setUserPostsLoading] = useState(true);
 
   // Check if user has a channel
-  const hasNoChannel = user && (!user.channelName || user.channelName.trim() === '');
+  const hasNoChannel = profile && (!profile.fullName || profile.fullName.trim() === '');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -49,11 +49,11 @@ export default function PostsFeedPage() {
       try {
         // Get user subscriptions
         const subscriptionsResponse = await UserService.getUserSubscriptions();
-        if (subscriptionsResponse.data) {
-          setSubscriptions(subscriptionsResponse.data);
+        if (subscriptionsResponse.result) {
+          setSubscriptions(subscriptionsResponse.result);
           
           // Get channel IDs
-          const channelIds = subscriptionsResponse.data.map(sub => sub.channel.id);
+          const channelIds = subscriptionsResponse.result.map(sub => sub.channel.id);
           
           // If there are subscriptions, fetch posts from those channels
           if (channelIds.length > 0) {
@@ -64,8 +64,8 @@ export default function PostsFeedPage() {
               try {
                 const postsResponse = await PostService.getPostsByUserId(channelId, 0, 5);
                 
-                if (postsResponse.data && postsResponse.data.content) {
-                  allPosts = [...allPosts, ...postsResponse.data.content];
+                if (postsResponse.result && postsResponse.result.content) {
+                  allPosts = [...allPosts, ...postsResponse.result.content];
                 }
               } catch (error) {
                 console.error(`Error fetching posts for channel ${channelId}:`, error);
@@ -93,14 +93,14 @@ export default function PostsFeedPage() {
   // Fetch user's own posts for "Your Posts" tab
   useEffect(() => {
     const fetchUserPosts = async () => {
-      if (!isAuthenticated || !user) return;
+      if (!isAuthenticated || !profile) return;
       
       setUserPostsLoading(true);
       
       try {
-        const response = await PostService.getPostsByUserId(user.id, 0, 10);
-        if (response.data) {
-          setUserPosts(response.data.content);
+        const response = await PostService.getMyPosts(0, 10);
+        if (response.result) {
+          setUserPosts(response.result.content);
         }
       } catch (error) {
         console.error('Error fetching user posts:', error);
@@ -110,7 +110,7 @@ export default function PostsFeedPage() {
     };
 
     fetchUserPosts();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, profile]);
 
   // Handle create post button click
   const handleCreatePostClick = () => {
@@ -134,11 +134,11 @@ export default function PostsFeedPage() {
   // Handle form success
   const handleFormSuccess = () => {
     // Refresh user posts after creating new post
-    if (user) {
-      PostService.getPostsByUserId(user.id, 0, 10)
+    if (profile) {
+      PostService.getPostsByUserId(profile.id, 0, 10)
         .then(response => {
-          if (response.data) {
-            setUserPosts(response.data.content);
+          if (response.result) {
+            setUserPosts(response.result.content);
           }
         })
         .catch(error => {

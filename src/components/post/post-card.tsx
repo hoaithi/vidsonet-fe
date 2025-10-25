@@ -27,11 +27,11 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
   const { likePost, dislikePost, deletePost } = usePosts();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const isOwner = isAuthenticated && user && user.id === post.user.id;
+  const isOwner = isAuthenticated && profile && profile.id === post.profileId;
 
   // Handle like
   const handleLike = async () => {
@@ -71,20 +71,20 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
     <Card className="w-full">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <Link href={`/channel/${post.user.id}`} className="flex items-center gap-3">
+          <Link href={`/profile/${post.profileId}`} className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage 
-                src={post.user.channelPicture || post.user.profilePicture || ''} 
-                alt={post.user.channelName || post.user.username} 
+                src={post.profileImage || ''} 
+                alt={post.profileName} 
               />
               <AvatarFallback>
-                {(post.user.channelName || post.user.username || 'U').charAt(0).toUpperCase()}
+                {(post.profileName|| 'U').charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             
             <div>
               <h3 className="font-medium text-sm">
-                {post.user.channelName || post.user.username}
+                {post.profileName}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {getRelativeTime(post.createdAt)}
@@ -128,6 +128,15 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
       
       <CardContent className="pt-0">
         <div className="space-y-3">
+          {post.imageUrl && (
+            <div className="w-full overflow-hidden rounded-md">
+              <img
+                src={post.imageUrl}
+                alt={post.title}
+                className="w-full h-auto object-cover"
+              />
+            </div>
+          )}
           <Link href={`/posts/${post.id}`} className="block">
             <h2 className="text-lg font-semibold hover:text-primary transition-colors">
               {post.title}
@@ -138,7 +147,7 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
             {post.content.length > 300 ? (
               <>
                 {post.content.substring(0, 300)}...
-                <Link href={`/posts/${post.id}`} className="text-primary hover:underline ml-1">
+                <Link href={`/post/${post.id}`} className="text-primary hover:underline ml-1">
                   Read more
                 </Link>
               </>
@@ -169,7 +178,7 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
               {post.dislikeCount > 0 && <span className="text-xs">{post.dislikeCount}</span>}
             </Button>
             
-            <Link href={`/posts/${post.id}#comments`}>
+            <Link href={`/post/${post.id}#comments`}>
               <Button
                 variant="ghost"
                 size="sm"

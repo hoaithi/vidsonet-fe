@@ -1,18 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AuthResponse } from '@/types/auth';
-import { User } from '@/types/user';
+import { Profile } from '@/types/profile';
 import { setLocalStorage, removeLocalStorage } from '@/lib/utils';
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: User | null;
+  profile: Profile | null;
   accessToken: string | null;
   refreshToken: string | null;
-  
   // Actions
-  setAuth: (authResponse: AuthResponse, user: User) => void;
-  updateUser: (user: User) => void;
+  setAuth: (authResponse: AuthResponse, profile?: Profile) => void;
+  updateProfile: (profile: Profile) => void;
   logout: () => void;
 }
 
@@ -20,24 +19,24 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       isAuthenticated: false,
-      user: null,
+      profile: null,
       accessToken: null,
       refreshToken: null,
       
-      setAuth: (authResponse: AuthResponse, user: User) => {
+      setAuth: (authResponse: AuthResponse, profile?: Profile) => {
         setLocalStorage('accessToken', authResponse.accessToken);
         setLocalStorage('refreshToken', authResponse.refreshToken);
         
         set({
           isAuthenticated: true,
-          user,
+          profile,
           accessToken: authResponse.accessToken,
           refreshToken: authResponse.refreshToken,
         });
       },
       
-      updateUser: (user: User) => {
-        set({ user });
+      updateProfile: (profile: Profile) => {
+        set({ profile });
       },
       
       logout: () => {
@@ -46,7 +45,7 @@ export const useAuthStore = create<AuthState>()(
         
         set({
           isAuthenticated: false,
-          user: null,
+          profile: null,
           accessToken: null,
           refreshToken: null,
         });
@@ -56,7 +55,7 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage',
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
-        user: state.user,
+        profile: state.profile,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
       }),

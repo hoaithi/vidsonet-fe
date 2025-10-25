@@ -16,7 +16,7 @@ import { Post } from '@/types/post';
 export default function PostDetailPage() {
   const params = useParams();
   const postId = parseInt(params.id as string);
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
   const { getPost } = usePosts();
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,7 +44,7 @@ export default function PostDetailPage() {
   }, [postId]);
 
   // Check if user is post owner
-  const isOwner = isAuthenticated && user && post && user.id === post.user.id;
+  const isOwner = isAuthenticated && profile && post && profile.id === post.user.id;
 
   // Loading state
   if (isLoading) {

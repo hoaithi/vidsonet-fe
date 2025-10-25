@@ -5,14 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import VideoGrid from '@/components/video/video-grid';
 import { VideoService } from '@/services/video-service';
-import { CategoryService } from '@/services/category-service';
-import { Video, Category } from '@/types/video';
+import { Video } from '@/types/video';
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [videos, setVideos] = useState<Video[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   // Fetch videos and categories
   useEffect(() => {
@@ -20,16 +17,10 @@ export default function HomePage() {
       setIsLoading(true);
       
       try {
-        // Fetch categories
-        const categoriesResponse = await CategoryService.getAllCategories();
-        if (categoriesResponse.data) {
-          setCategories(categoriesResponse.data);
-        }
-
         // Fetch trending videos initially
-        const videosResponse = await VideoService.searchVideos({});
-        if (videosResponse.data) {
-          setVideos(videosResponse.data.content);
+        const videosResponse = await VideoService.searchVideos();
+        if (videosResponse.result) {
+          setVideos(videosResponse.result.content);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -41,31 +32,11 @@ export default function HomePage() {
     fetchData();
   }, []);
 
-  // Handle category change
-  const handleCategoryChange = async (categoryId: string) => {
-    setIsLoading(true);
-    setActiveCategory(categoryId);
-    
-    try {
-      const response = await VideoService.searchVideos({
-        categoryId: categoryId === 'all' ? undefined : parseInt(categoryId),
-      });
-      
-      if (response.data) {
-        setVideos(response.data.content);
-      }
-    } catch (error) {
-      console.error('Error fetching videos by category:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Discover Videos</h1>
       
-      <Tabs defaultValue="all" onValueChange={handleCategoryChange}>
+      <Tabs defaultValue="all">
         <div className="border-b mb-6 overflow-x-auto">
           <TabsList className="bg-transparent h-auto p-0">
             <TabsTrigger
@@ -75,7 +46,7 @@ export default function HomePage() {
               All
             </TabsTrigger>
             
-            {categories.map((category) => (
+            {/* {categories.map((category) => (
               <TabsTrigger
                 key={category.id}
                 value={category.id.toString()}
@@ -83,7 +54,7 @@ export default function HomePage() {
               >
                 {category.name}
               </TabsTrigger>
-            ))}
+            ))} */}
           </TabsList>
         </div>
         
@@ -94,16 +65,6 @@ export default function HomePage() {
             <VideoGrid videos={videos} columns={3} />
           )}
         </TabsContent>
-        
-        {categories.map((category) => (
-          <TabsContent key={category.id} value={category.id.toString()} className="mt-0">
-            {isLoading ? (
-              <VideoSkeleton />
-            ) : (
-              <VideoGrid videos={videos} columns={3} />
-            )}
-          </TabsContent>
-        ))}
       </Tabs>
     </div>
   );

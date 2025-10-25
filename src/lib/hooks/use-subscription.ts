@@ -1,8 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import UserService from '@/services/user-service';
-import { useUser } from './use-user';
+import UserService from '@/services/profile-service';
 
 
 export const useSubscription = () => {
@@ -11,15 +10,15 @@ export const useSubscription = () => {
   const [subscriberCount, setSubscriberCount] = useState(0);
 
   // Check subscription status
-  const checkSubscription = async (channelId: number) => {
+  const checkSubscription = async (channelId: string) => {
     try {
       const response = await UserService.checkSubscription(channelId);
       
-      if (response.data !== undefined) {
-        setIsSubscribed(response.data);
+      if (response.result !== undefined) {
+        setIsSubscribed(response.result);
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Check subscription error:', error);
       return false;
@@ -27,15 +26,15 @@ export const useSubscription = () => {
   };
 
   // Get subscriber count
-  const getSubscriberCount = async (channelId: number) => {
+  const getSubscriberCount = async (channelId: string) => {
     try {
       const response = await UserService.getSubscriberCount(channelId);
       
-      if (response.data !== undefined) {
-        setSubscriberCount(response.data);
+      if (response.result !== undefined) {
+        setSubscriberCount(response.result);
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get subscriber count error:', error);
       return 0;
@@ -43,7 +42,7 @@ export const useSubscription = () => {
   };
 
   // Subscribe to channel
-  const subscribeToChannel = async (channelId: number, notificationEnabled: boolean = true) => {
+  const subscribeToChannel = async (channelId: string, notificationEnabled: boolean = true) => {
     setIsLoading(true);
     
     try {
@@ -68,7 +67,7 @@ export const useSubscription = () => {
   };
 
   // Unsubscribe from channel
-  const unsubscribeFromChannel = async (channelId: number) => {
+  const unsubscribeFromChannel = async (channelId: string) => {
     setIsLoading(true);
     
     try {
@@ -93,7 +92,7 @@ export const useSubscription = () => {
   };
 
   // Toggle notifications
-  const toggleNotifications = async (channelId: number, enabled: boolean) => {
+  const toggleNotifications = async (channelId: string, enabled: boolean) => {
     try {
       await UserService.toggleNotifications(channelId, enabled);
       

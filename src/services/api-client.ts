@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/auth-store';
 export interface ApiResponse<T> {
   code: number;
   message: string;
-  data?: T;
+  result?: T;
 }
 
 // Create Axios instance
@@ -59,18 +59,18 @@ apiClient.interceptors.response.use(
         
         // Call refresh token endpoint
         const response = await axios.post<ApiResponse<{ accessToken: string, refreshToken: string }>>(
-          `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
+          `${process.env.NEXT_PUBLIC_API_URL}/identity/auth/refresh-token`,
           { refreshToken }
         );
         
-        if (response.data.data) {
+        if (response.data.result) {
           // Update stored tokens
-          setLocalStorage('accessToken', response.data.data.accessToken);
-          setLocalStorage('refreshToken', response.data.data.refreshToken);
+          setLocalStorage('accessToken', response.data.result.accessToken);
+          setLocalStorage('refreshToken', response.data.result.refreshToken);
           
           // Retry the original request with new token
           if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${response.data.data.accessToken}`;
+            originalRequest.headers.Authorization = `Bearer ${response.data.result.accessToken}`;
           }
           return apiClient(originalRequest);
         }

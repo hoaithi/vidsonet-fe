@@ -15,11 +15,11 @@ export const usePlaylists = () => {
         try {
             const response = await PlaylistService.getWatchLaterVideos();
 
-            if (response.data) {
-                setWatchLaterVideos(response.data);
+            if (response.result) {
+                setWatchLaterVideos(response.result);
             }
 
-            return response.data || [];
+            return response.result || [];
         } catch (error: any) {
             console.error('Error fetching watch later videos:', error);
 
@@ -32,34 +32,35 @@ export const usePlaylists = () => {
             setIsLoading(false);
         }
     };
-
-    // Get history videos
-    const getHistoryVideos = async () => {
+    // Get watch later videos
+      const getHistoryVideos = async (
+        page: number = 0,
+        size: number = 12,
+        sortBy: string = 'addedAt',
+        sortDir: 'asc' | 'desc' = 'desc'
+      ) => {
         setIsLoading(true);
-
+    
         try {
-            const response = await PlaylistService.getHistoryVideos();
-
-            if (response.data) {
-                setHistoryVideos(response.data);
-            }
-
-            return response.data || [];
+          const response = await PlaylistService.getHistoryVideos(page, size, sortBy, sortDir);
+          return response.result;
         } catch (error: any) {
-            console.error('Error fetching history videos:', error);
-
-            toast.error(
-                error.response?.data?.message ||
-                'Failed to load history videos. Please try again.'
-            );
-            return [];
+          console.error('Get watch later videos error:', error);
+    
+          toast.error(
+            error.response?.data?.message ||
+            'Failed to load Watch Later videos. Please try again.'
+          );
+          return null;
         } finally {
-            setIsLoading(false);
+          setIsLoading(false);
         }
-    };
+      };
+
+    
 
     // Remove video from watch later
-    const removeFromWatchLater = async (videoId: number) => {
+    const removeFromWatchLater = async (videoId: string) => {
         try {
             await PlaylistService.removeFromWatchLater(videoId);
 
@@ -80,7 +81,7 @@ export const usePlaylists = () => {
     };
 
     // Remove video from history
-    const removeFromHistory = async (videoId: number) => {
+    const removeFromHistory = async (videoId: string) => {
         try {
             await PlaylistService.removeFromHistory(videoId);
 

@@ -50,9 +50,9 @@ export default function PaymentSuccessPage() {
                 if (result && tierId) {
                     try {
                         const tierResponse = await MembershipService.getMembershipTierById(parseInt(tierId));
-                        if (tierResponse.data) {
-                            setChannelId(tierResponse.data.channelId);
-                            setChannelName(tierResponse.data.channelName);
+                        if (tierResponse.result) {
+                            setChannelId(tierResponse.result.channelId);
+                            setChannelName(tierResponse.result.channelName);
                         }
                     } catch (tierError) {
                         console.error('Error fetching tier information:', tierError);

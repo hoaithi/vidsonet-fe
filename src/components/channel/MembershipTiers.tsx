@@ -52,12 +52,12 @@ import { useMemberships } from '@/lib/hooks/use-memberships';
 import { MembershipTier, MembershipTierCreateRequest, MembershipTierUpdateRequest } from '@/types/membership';
 
 interface MembershipTiersProps {
-    channelId: number;
+    channelId: string;
     isOwnChannel: boolean;
 }
 
 export function MembershipTiers({ channelId, isOwnChannel }: MembershipTiersProps) {
-    const { isAuthenticated, user } = useAuthStore();
+    const { isAuthenticated, profile } = useAuthStore();
     const {
         isLoading,
         membershipTiers,
@@ -182,7 +182,7 @@ export function MembershipTiers({ channelId, isOwnChannel }: MembershipTiersProp
     };
 
     // Handle subscribe
-    const handleSubscribe = async (tierId: number) => {
+    const handleSubscribe = async (tierId: string) => {
         if (!isAuthenticated) {
             toast.error('Please sign in to subscribe');
             return;

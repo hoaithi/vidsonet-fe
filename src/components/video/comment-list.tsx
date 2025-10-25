@@ -24,15 +24,15 @@ import { commentSchema } from '@/lib/validation';
 import { getRelativeTime } from '@/lib/utils';
 
 interface CommentListProps {
-  videoId: number;
+  videoId: string;
   isVideoOwner?: boolean;
 }
 
 export function CommentList({ videoId, isVideoOwner = false }: CommentListProps) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
   const { isLoading, comments, getVideoComments, addComment, replyToComment, updateComment, deleteComment, heartComment, pinComment } = useComments(videoId);
-  const [replyingTo, setReplyingTo] = useState<number | null>(null);
-  const [editingComment, setEditingComment] = useState<number | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [editingComment, setEditingComment] = useState<string | null>(null);
 
   // Load comments
   useState(() => {
@@ -66,7 +66,8 @@ export function CommentList({ videoId, isVideoOwner = false }: CommentListProps)
     
     await addComment({
       content: values.content,
-      videoId,
+      itemId: videoId,
+      commentType: "VIDEO"
     });
     
     commentForm.reset();
@@ -101,7 +102,7 @@ export function CommentList({ videoId, isVideoOwner = false }: CommentListProps)
   };
 
   // Toggle heart comment
-  const toggleHeart = async (commentId: number, currentHearted: boolean) => {
+  const toggleHeart = async (commentId: string, currentHearted: boolean) => {
     if (!isAuthenticated || !isVideoOwner) return;
     
     if (currentHearted) {
@@ -113,7 +114,7 @@ export function CommentList({ videoId, isVideoOwner = false }: CommentListProps)
   };
 
   // Toggle pin comment
-  const togglePin = async (commentId: number, currentPinned: boolean) => {
+  const togglePin = async (commentId: string, currentPinned: boolean) => {
     if (!isAuthenticated || !isVideoOwner) return;
     
     if (currentPinned) {
@@ -125,7 +126,7 @@ export function CommentList({ videoId, isVideoOwner = false }: CommentListProps)
   };
 
   // Delete a comment
-  const handleDeleteComment = async (commentId: number) => {
+  const handleDeleteComment = async (commentId: string) => {
     if (!isAuthenticated) return;
     
     const confirmed = window.confirm('Are you sure you want to delete this comment?');
@@ -146,7 +147,7 @@ export function CommentList({ videoId, isVideoOwner = false }: CommentListProps)
 
   // Render a single comment
   const renderComment = (comment: Comment, isReply: boolean = false) => {
-    const isOwner = user?.id === comment.user.id;
+    const isOwner = profile?.id === comment.owner.id;
     const showReplyButton = isAuthenticated && !isReply;
     const showEditButton = isAuthenticated && isOwner;
     const showDeleteButton = isAuthenticated && (isOwner || isVideoOwner);
@@ -159,13 +160,13 @@ export function CommentList({ videoId, isVideoOwner = false }: CommentListProps)
         className={`flex gap-3 ${comment.isPinned ? 'bg-muted/50 p-3 rounded-lg' : ''} ${isReply ? 'mt-3 ml-10' : 'mt-6'}`}
       >
         <Avatar className="h-8 w-8 flex-shrink-0">
-          <AvatarImage src={comment.user.profilePicture || ''} alt={comment.user.username} />
-          <AvatarFallback>{comment.user.username.charAt(0).toUpperCase()}</AvatarFallback>
+          <AvatarImage src={comment.owner.avatarUrl || ''} alt={comment.owner.fullName} />
+          <AvatarFallback>{comment.owner.fullName?.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-sm">{comment.user.username}</span>
+            <span className="font-medium text-sm">{comment.owner.fullName}</span>
             <span className="text-xs text-muted-foreground">{getRelativeTime(comment.createdAt)}</span>
             {comment.isPinned && (
               <span className="text-xs text-primary">Pinned</span>
@@ -223,11 +224,11 @@ export function CommentList({ videoId, isVideoOwner = false }: CommentListProps)
               <Button
                 variant="ghost"
                 size="sm"
-                className={`h-8 px-2 ${comment.isHearted ? 'text-red-500' : 'text-muted-foreground'}`}
-                onClick={() => toggleHeart(comment.id, comment.isHearted)}
+                className={`h-8 px-2 ${comment.hearted ? 'text-red-500' : 'text-muted-foreground'}`}
+                onClick={() => toggleHeart(comment.id, comment.hearted)}
               >
                 <Heart className="h-4 w-4 mr-1" />
-                {comment.isHearted ? 'Hearted' : 'Heart'}
+                {comment.hearted ? 'Hearted' : 'Heart'}
               </Button>
             )}
             
@@ -317,8 +318,8 @@ export function CommentList({ videoId, isVideoOwner = false }: CommentListProps)
       {isAuthenticated ? (
         <div className="mt-4 flex gap-3">
           <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarImage src={user?.profilePicture || ''} alt={user?.username} />
-            <AvatarFallback>{user?.username?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+            <AvatarImage src={profile?.avatarUrl || ''} alt={profile?.fullName} />
+            <AvatarFallback>{profile?.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
           
           <form onSubmit={commentForm.handleSubmit(onCommentSubmit)} className="flex-1">

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Input as FileInput } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -29,13 +30,37 @@ import { usePosts } from '@/lib/hooks/use-posts';
 import { Post, PostCreateRequest, PostUpdateRequest } from '@/types/post';
 
 // Form validation schema
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 const postSchema = z.object({
   title: z.string()
     .min(1, 'Title is required')
     .max(200, 'Title must be at most 200 characters'),
-  content: z.string()
-    .min(1, 'Content is required')
-    .max(5000, 'Content must be at most 5000 characters'),
+  content: z.string().optional(),
+  imageFile: z
+    .any()
+    .refine(
+      (file) => !file || file instanceof File || file?.length === 1,
+      'Invalid file'
+    )
+    .refine(
+      (file) => {
+        if (!file) return true;
+        const f = file instanceof File ? file : file[0];
+        return ACCEPTED_IMAGE_TYPES.includes(f.type);
+      },
+      'Only JPG, PNG, or WEBP are accepted'
+    )
+    .refine(
+      (file) => {
+        if (!file) return true;
+        const f = file instanceof File ? file : file[0];
+        return f.size <= MAX_IMAGE_SIZE;
+      },
+      'Image must be less than 5MB'
+    )
+    .optional(),
 });
 
 interface PostFormProps {
@@ -56,6 +81,7 @@ export function PostForm({ open, onOpenChange, post, onSuccess }: PostFormProps)
     defaultValues: {
       title: '',
       content: '',
+      imageFile: undefined,
     },
   });
 
@@ -65,11 +91,13 @@ export function PostForm({ open, onOpenChange, post, onSuccess }: PostFormProps)
       form.reset({
         title: post.title,
         content: post.content,
+        imageFile: undefined,
       });
     } else {
       form.reset({
         title: '',
         content: '',
+        imageFile: undefined,
       });
     }
   }, [post, form]);
@@ -83,6 +111,7 @@ export function PostForm({ open, onOpenChange, post, onSuccess }: PostFormProps)
         const updateData: PostUpdateRequest = {
           title: values.title,
           content: values.content,
+          imageFile: (values.imageFile instanceof File) ? values.imageFile : Array.isArray(values.imageFile) ? values.imageFile?.[0] : undefined,
         };
         
         const result = await updatePost(post.id, updateData);
@@ -94,6 +123,7 @@ export function PostForm({ open, onOpenChange, post, onSuccess }: PostFormProps)
         const createData: PostCreateRequest = {
           title: values.title,
           content: values.content,
+          imageFile: (values.imageFile instanceof File) ? values.imageFile : Array.isArray(values.imageFile) ? values.imageFile?.[0] : undefined,
         };
         
         const result = await createPost(createData);
@@ -176,6 +206,26 @@ export function PostForm({ open, onOpenChange, post, onSuccess }: PostFormProps)
                       placeholder="What's on your mind?"
                       className="min-h-32"
                       {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Image upload */}
+            <FormField
+              control={form.control}
+              name="imageFile"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Image (optional)</FormLabel>
+                  <FormControl>
+                    <input
+                      type="file"
+                      accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                      onChange={(e) => field.onChange(e.target.files?.[0])}
                       disabled={isSubmitting}
                     />
                   </FormControl>

@@ -15,12 +15,12 @@ export const usePosts = () => {
     try {
       const response = await PostService.createPost(data);
       
-      if (response.data) {
-        setPosts(prev => [response.data!, ...prev]);
+      if (response.result) {
+        setPosts(prev => [response.result!, ...prev]);
         toast.success('Post created successfully');
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Create post error:', error);
       
@@ -35,17 +35,17 @@ export const usePosts = () => {
   };
 
   // Get post by ID
-  const getPost = async (id: number) => {
+  const getPost = async (id: string) => {
     setIsLoading(true);
     
     try {
       const response = await PostService.getPostById(id);
       
-      if (response.data) {
-        setCurrentPost(response.data);
+      if (response.result) {
+        setCurrentPost(response.result);
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get post error:', error);
       
@@ -60,21 +60,21 @@ export const usePosts = () => {
   };
 
   // Get posts by user ID
-  const getPostsByUserId = async (userId: number, page: number = 0, size: number = 10) => {
+  const getPostsByUserId = async (userId: string, page: number = 0, size: number = 10) => {
     setIsLoading(true);
     
     try {
       const response = await PostService.getPostsByUserId(userId, page, size);
       
-      if (response.data) {
+      if (response.result) {
         if (page === 0) {
-          setPosts(response.data.content);
+          setPosts(response.result.content);
         } else {
-          setPosts(prev => [...prev, ...response.data!.content]);
+          setPosts(prev => [...prev, ...response.result!.content]);
         }
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get posts error:', error);
       
@@ -89,25 +89,25 @@ export const usePosts = () => {
   };
 
   // Update post
-  const updatePost = async (id: number, data: PostUpdateRequest) => {
+  const updatePost = async (id: string, data: PostUpdateRequest) => {
     setIsLoading(true);
     
     try {
       const response = await PostService.updatePost(id, data);
       
-      if (response.data) {
+      if (response.result) {
         setPosts(prev => prev.map(post => 
-          post.id === id ? response.data! : post
+          post.id === id ? response.result! : post
         ));
         
         if (currentPost && currentPost.id === id) {
-          setCurrentPost(response.data);
+          setCurrentPost(response.result);
         }
         
         toast.success('Post updated successfully');
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Update post error:', error);
       
@@ -122,7 +122,7 @@ export const usePosts = () => {
   };
 
   // Delete post
-  const deletePost = async (id: number) => {
+  const deletePost = async (id: string) => {
     setIsLoading(true);
     
     try {
@@ -150,21 +150,21 @@ export const usePosts = () => {
   };
 
   // Like post
-  const likePost = async (id: number) => {
+  const likePost = async (id: string) => {
     try {
       const response = await PostService.likePost(id);
       
-      if (response.data) {
+      if (response.result) {
         setPosts(prev => prev.map(post => 
-          post.id === id ? response.data! : post
+          post.id === id ? response.result! : post
         ));
         
         if (currentPost && currentPost.id === id) {
-          setCurrentPost(response.data);
+          setCurrentPost(response.result);
         }
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Like post error:', error);
       
@@ -177,21 +177,21 @@ export const usePosts = () => {
   };
 
   // Dislike post
-  const dislikePost = async (id: number) => {
+  const dislikePost = async (id: string) => {
     try {
       const response = await PostService.dislikePost(id);
       
-      if (response.data) {
+      if (response.result) {
         setPosts(prev => prev.map(post => 
-          post.id === id ? response.data! : post
+          post.id === id ? response.result! : post
         ));
         
         if (currentPost && currentPost.id === id) {
-          setCurrentPost(response.data);
+          setCurrentPost(response.result);
         }
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Dislike post error:', error);
       
@@ -228,11 +228,11 @@ export const usePostComments = (postId?: number) => {
     try {
       const response = await PostService.getPostComments(id);
       
-      if (response.data) {
-        setComments(response.data);
+      if (response.result) {
+        setComments(response.result);
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get post comments error:', error);
       
@@ -253,12 +253,12 @@ export const usePostComments = (postId?: number) => {
     try {
       const response = await PostService.createComment(data);
       
-      if (response.data) {
-        setComments(prev => [response.data!, ...prev]);
+      if (response.result) {
+        setComments(prev => [response.result!, ...prev]);
         toast.success('Comment added successfully');
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Create comment error:', error);
       
@@ -276,7 +276,7 @@ export const usePostComments = (postId?: number) => {
   const getCommentReplies = async (commentId: number) => {
     try {
       const response = await PostService.getCommentReplies(commentId);
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get comment replies error:', error);
       
@@ -295,15 +295,15 @@ export const usePostComments = (postId?: number) => {
     try {
       const response = await PostService.updateComment(commentId, data);
       
-      if (response.data) {
+      if (response.result) {
         setComments(prev => prev.map(comment => 
-          comment.id === commentId ? response.data! : comment
+          comment.id === commentId ? response.result! : comment
         ));
         
         toast.success('Comment updated successfully');
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Update comment error:', error);
       
@@ -346,15 +346,15 @@ export const usePostComments = (postId?: number) => {
     try {
       const response = await PostService.heartComment(commentId);
       
-      if (response.data) {
+      if (response.result) {
         setComments(prev => prev.map(comment => 
-          comment.id === commentId ? response.data! : comment
+          comment.id === commentId ? response.result! : comment
         ));
         
         toast.success('Comment hearted');
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Heart comment error:', error);
       
@@ -371,15 +371,15 @@ export const usePostComments = (postId?: number) => {
     try {
       const response = await PostService.unheartComment(commentId);
       
-      if (response.data) {
+      if (response.result) {
         setComments(prev => prev.map(comment => 
-          comment.id === commentId ? response.data! : comment
+          comment.id === commentId ? response.result! : comment
         ));
         
         toast.success('Comment unhearted');
       }
       
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Unheart comment error:', error);
       

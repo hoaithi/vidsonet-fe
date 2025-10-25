@@ -1,61 +1,67 @@
 import apiClient, { ApiResponse } from './api-client';
-import { Comment, CommentUpdateRequest } from '@/types/video';
+import { Comment, CommentUpdateRequest, CommentCreateRequest } from '@/types/video';
 
 export const CommentService = {
+  // Add comment to video
+  addComment: async (id: string, data: CommentCreateRequest): Promise<ApiResponse<Comment>> => {
+    const response = await apiClient.post<ApiResponse<Comment>>(`/comment/${id}/comments`, data);
+    return response.data;
+  },
+
   // Get comment by ID
-  getCommentById: async (id: number): Promise<ApiResponse<Comment>> => {
-    const response = await apiClient.get<ApiResponse<Comment>>(`/comments/${id}`);
+  getCommentById: async (id: string): Promise<ApiResponse<Comment>> => {
+    const response = await apiClient.get<ApiResponse<Comment>>(`/comment/${id}`);
     return response.data;
   },
 
   // Get comment replies
-  getCommentReplies: async (id: number): Promise<ApiResponse<Comment[]>> => {
-    const response = await apiClient.get<ApiResponse<Comment[]>>(`/comments/${id}/replies`);
+  getCommentReplies: async (id: string): Promise<ApiResponse<Comment[]>> => {
+    const response = await apiClient.get<ApiResponse<Comment[]>>(`/comment/${id}/replies`);
     return response.data;
   },
 
   // Reply to comment
-  replyToComment: async (id: number, content: string): Promise<ApiResponse<Comment>> => {
+  replyToComment: async (id: string, content: string): Promise<ApiResponse<Comment>> => {
     const response = await apiClient.post<ApiResponse<Comment>>(
-      `/comments/${id}/replies`,
+      `/comment/${id}/replies`,
       { content }
     );
     return response.data;
   },
 
   // Update comment
-  updateComment: async (id: number, data: CommentUpdateRequest): Promise<ApiResponse<Comment>> => {
-    const response = await apiClient.put<ApiResponse<Comment>>(`/comments/${id}`, data);
+  updateComment: async (id: string, data: CommentUpdateRequest): Promise<ApiResponse<Comment>> => {
+    const response = await apiClient.put<ApiResponse<Comment>>(`/comment/${id}`, data);
     return response.data;
   },
 
   // Delete comment
-  deleteComment: async (id: number): Promise<ApiResponse<void>> => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/comments/${id}`);
+  deleteComment: async (id: string): Promise<ApiResponse<void>> => {
+    const response = await apiClient.delete<ApiResponse<void>>(`/comment/${id}`);
     return response.data;
   },
 
   // Heart comment (for video owners)
-  heartComment: async (id: number): Promise<ApiResponse<Comment>> => {
-    const response = await apiClient.post<ApiResponse<Comment>>(`/comments/${id}/heart`);
+  heartComment: async (id: string): Promise<ApiResponse<Comment>> => {
+    const response = await apiClient.post<ApiResponse<Comment>>(`/comment/${id}/heart`);
     return response.data;
   },
 
   // Unheart comment
-  unheartComment: async (id: number): Promise<ApiResponse<Comment>> => {
-    const response = await apiClient.delete<ApiResponse<Comment>>(`/comments/${id}/heart`);
+  unheartComment: async (id: string): Promise<ApiResponse<Comment>> => {
+    const response = await apiClient.delete<ApiResponse<Comment>>(`/comment/${id}/heart`);
     return response.data;
   },
 
   // Pin comment (for video owners)
-  pinComment: async (id: number): Promise<ApiResponse<Comment>> => {
-    const response = await apiClient.post<ApiResponse<Comment>>(`/comments/${id}/pin`);
+  pinComment: async (id: string): Promise<ApiResponse<Comment>> => {
+    const response = await apiClient.post<ApiResponse<Comment>>(`/comment/${id}/pin`);
     return response.data;
   },
 
   // Unpin comment
-  unpinComment: async (id: number): Promise<ApiResponse<Comment>> => {
-    const response = await apiClient.delete<ApiResponse<Comment>>(`/comments/${id}/pin`);
+  unpinComment: async (id: string): Promise<ApiResponse<Comment>> => {
+    const response = await apiClient.delete<ApiResponse<Comment>>(`/comment/${id}/pin`);
     return response.data;
   }
 };

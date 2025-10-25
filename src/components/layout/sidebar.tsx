@@ -21,14 +21,14 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/auth-store';
-import UserService from '@/services/user-service';
-import { User } from '@/types/user';
+import UserService from '@/services/profile-service';
+import { Profile } from '@/types/profile';
 import { useUser } from '@/lib/hooks/use-user';
 
 export function Sidebar() {
   const { isAuthenticated } = useAuthStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [subscriptions, setSubscriptions] = useState<User[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Profile[]>([]);
   const pathname = usePathname();
 
   // Check if path is active
@@ -48,9 +48,9 @@ export function Sidebar() {
       const fetchSubscriptions = async () => {
         try {
           const response = await UserService.getUserSubscriptions();
-          if (response.data) {
+          if (response.result) {
             // Extract channel info from subscriptions
-            const channels = response.data.map(sub => sub.channel);
+            const channels = response.result.map(sub => sub.channel);
             setSubscriptions(channels);
           }
         } catch (error) {
@@ -178,23 +178,24 @@ export function Sidebar() {
                     className={`w-full justify-start ${isCollapsed ? 'justify-center px-0' : ''}`}
                     asChild
                   >
-                    <Link href={`/channel/${subscription.id}`}>
+                    <Link href={`/profile/${subscription.id}`}>
                       <div className="h-6 w-6 rounded-full mr-2 overflow-hidden flex-shrink-0">
-                        {subscription.channelPicture ? (
+                        {subscription.avatarUrl ? (
                           <img 
-                            src={subscription.channelPicture} 
-                            alt={subscription.channelName || subscription.username}
+                            referrerPolicy="no-referrer"
+                            src={subscription.avatarUrl} 
+                            alt={subscription.fullName}
                             className="h-full w-full object-cover"
                           />
                         ) : (
                           <div className="h-full w-full bg-primary/10 flex items-center justify-center text-xs">
-                            {(subscription.channelName || subscription.username || 'C').charAt(0).toUpperCase()}
+                            {(subscription.fullName || 'C').charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
                       {!isCollapsed && (
                         <span className="truncate">
-                          {subscription.channelName || subscription.username}
+                          {subscription.fullName}
                         </span>
                       )}
                     </Link>

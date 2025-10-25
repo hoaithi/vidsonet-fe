@@ -13,12 +13,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 interface ChannelPostsTabProps {
-  userId: number;
+  userId: string;
   isOwnChannel?: boolean;
 }
 
 export function ChannelPostsTab({ userId, isOwnChannel = false }: ChannelPostsTabProps) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
   const { posts, getPostsByUserId, isLoading } = usePosts();
   const [showPostForm, setShowPostForm] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
@@ -26,7 +26,7 @@ export function ChannelPostsTab({ userId, isOwnChannel = false }: ChannelPostsTa
   const [hasMore, setHasMore] = useState(true);
 
   // Check if user has a channel
-  const hasNoChannel = isOwnChannel && user && (!user.channelName || user.channelName.trim() === '');
+  const hasNoChannel = isOwnChannel && profile && (!profile.fullName || profile.fullName.trim() === '');
 
   // Fetch posts when component mounts
   useEffect(() => {

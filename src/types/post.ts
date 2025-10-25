@@ -1,25 +1,31 @@
-import { User } from './user';
+import { Profile } from './profile';
 
 export interface Post {
-  id: number;
+  id: string;
   title: string;
   content: string;
+  imageUrl?: string;
   createdAt: string;
   updatedAt?: string;
   likeCount: number;
   dislikeCount: number;
-  user: User;
+  user: Profile;
+  profileImage: string;
+  profileName: string;
+  profileId: string;
   commentCount: number;
 }
 
 export interface PostCreateRequest {
   title: string;
-  content: string;
+  content?: string;
+  imageFile?: File | null;
 }
 
 export interface PostUpdateRequest {
   title?: string;
   content?: string;
+  imageFile?: File | null;
 }
 
 export interface PostComment {
@@ -31,7 +37,7 @@ export interface PostComment {
   dislikeCount: number;
   isHearted: boolean;
   heartedAt?: string;
-  user: User;
+  user: Profile;
   postId: number;
   parentId?: number;
   replies?: PostComment[];

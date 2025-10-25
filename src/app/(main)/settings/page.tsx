@@ -32,7 +32,7 @@ import { updateProfileSchema } from '@/lib/validation';
 
 
 export default function SettingsPage() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
   const { updateProfile } = useUser();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,10 +56,10 @@ export default function SettingsPage() {
   const form = useForm<z.infer<typeof updateProfileSchema>>({
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
-      username: user?.username || '',
-      email: user?.email || '',
-      channelName: user?.channelName || '',
-      channelDescription: user?.channelDescription || '',
+      username: profile?.fullName || '',
+      email: profile?.email || '',
+      channelName: profile?.fullName || '',
+      channelDescription: profile?.description || '',
       profilePicture: undefined,
       bannerImage: undefined,
       channelPicture: undefined,
@@ -68,27 +68,27 @@ export default function SettingsPage() {
 
   // Update form values when user data changes
   useEffect(() => {
-    if (user) {
+    if (profile) {
       form.reset({
-        username: user.username,
-        email: user.email,
-        channelName: user.channelName || '',
-        channelDescription: user.channelDescription || '',
+        username: profile.fullName,
+        email: profile.email,
+        channelName: profile.fullName,
+        channelDescription: profile.description,
         profilePicture: undefined,
         bannerImage: undefined,
         channelPicture: undefined,
       });
       
       // Set image previews
-      setProfilePreview(user.profilePicture || null);
-      setBannerPreview(user.bannerImage || null);
-      setChannelPicturePreview(user.channelPicture || null);
+      setProfilePreview(profile.avatarUrl || null);
+      setBannerPreview(profile.bannerUrl || null);
+      setChannelPicturePreview(profile.avatarUrl || null);
     }
-  }, [user, form]);
+  }, [profile, form]);
 
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof updateProfileSchema>) => {
-    if (!isAuthenticated || !user) return;
+    if (!isAuthenticated || !profile) return;
     
     setIsSubmitting(true);
     
@@ -158,7 +158,7 @@ export default function SettingsPage() {
     };
   }, [profilePreview, bannerPreview, channelPicturePreview]);
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated || !profile) {
     return null;
   }
 
@@ -184,7 +184,7 @@ export default function SettingsPage() {
                     <Avatar className="w-24 h-24">
                       <AvatarImage src={profilePreview || ''} />
                       <AvatarFallback className="text-xl">
-                        {user.username?.charAt(0).toUpperCase() || <User />}
+                        {profile.fullName?.charAt(0).toUpperCase() || <User />}
                       </AvatarFallback>
                     </Avatar>
                     
@@ -293,7 +293,7 @@ export default function SettingsPage() {
                     <Avatar className="w-24 h-24">
                       <AvatarImage src={channelPicturePreview || ''} />
                       <AvatarFallback className="text-xl">
-                        {(user.channelName || user.username)?.charAt(0).toUpperCase() || <User />}
+                        {(profile.fullName)?.charAt(0).toUpperCase() || <User />}
                       </AvatarFallback>
                     </Avatar>
                     

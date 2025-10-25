@@ -7,17 +7,25 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import ChannelHeader from '@/components/channel/channel-header';
 import VideoGrid from '@/components/video/video-grid';
-import { User } from '@/types/user';
+import ChannelPostsTab from '@/components/post/channel-posts-tab';
+import { MembershipTiers } from '@/components/channel/MembershipTiers';
+import { Profile } from '@/types/profile';
 import { Video } from '@/types/video';
-import {UserService} from '@/services/user-service';
-import {VideoService} from '@/services/video-service';
+import { ProfileService } from '@/services/profile-service';
+import { VideoService } from '@/services/video-service';
+import { useAuthStore } from '@/store/auth-store';
 
 export default function ChannelPage() {
   const params = useParams();
-  const channelId = parseInt(params.id as string);
+  const channelId = params.id as string;
+  const { isAuthenticated, profile } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
-  const [channel, setChannel] = useState<User | null>(null);
+  const [channel, setChannel] = useState<Profile | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [activeTab, setActiveTab] = useState('videos');
+
+  // Check if this is the user's own channel
+  const isOwnChannel = isAuthenticated && profile && profile.id === channelId;
 
   // Fetch channel data
   useEffect(() => {
@@ -26,15 +34,15 @@ export default function ChannelPage() {
       
       try {
         // Get channel info
-        const channelResponse = await UserService.getChannelByUserId(channelId);
-        if (channelResponse.data) {
-          setChannel(channelResponse.data);
+        const channelResponse = await ProfileService.getUserById(channelId);
+        if (channelResponse.result) {
+          setChannel(channelResponse.result);
         }
 
         // Get channel videos
-        const videosResponse = await VideoService.searchVideos({ userId: channelId });
-        if (videosResponse.data) {
-          setVideos(videosResponse.data.content);
+        const videosResponse = await VideoService.getVideosByChannelId(channelId);
+        if (videosResponse.result) {
+          setVideos(videosResponse.result.content);
         }
       } catch (error) {
         console.error('Error fetching channel data:', error);
@@ -81,9 +89,16 @@ export default function ChannelPage() {
     <div className="space-y-6">
       <ChannelHeader channel={channel} />
       
-      <Tabs defaultValue="videos" className="mt-6">
+      <Tabs 
+        defaultValue="videos" 
+        className="mt-6"
+        value={activeTab}
+        onValueChange={setActiveTab}
+      >
         <TabsList className="w-full justify-start">
           <TabsTrigger value="videos">Videos</TabsTrigger>
+          <TabsTrigger value="posts">Posts</TabsTrigger>
+          <TabsTrigger value="membership">Membership</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
         </TabsList>
         
@@ -98,14 +113,22 @@ export default function ChannelPage() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="posts" className="mt-6">
+          <ChannelPostsTab userId={channelId} isOwnChannel={isOwnChannel || false} />
+        </TabsContent>
+        
+        <TabsContent value="membership" className="mt-6">
+          <MembershipTiers channelId={channelId} isOwnChannel={isOwnChannel || false} />
+        </TabsContent>
         
         <TabsContent value="about" className="mt-6">
           <div className="max-w-3xl">
-            <h2 className="text-xl font-semibold mb-4">About {channel.channelName || channel.username}</h2>
+            <h2 className="text-xl font-semibold mb-4">About {channel.fullName}</h2>
             
-            {channel.channelDescription ? (
+            {channel.description ? (
               <div className="whitespace-pre-line">
-                {channel.channelDescription}
+                {channel.description}
               </div>
             ) : (
               <p className="text-muted-foreground">

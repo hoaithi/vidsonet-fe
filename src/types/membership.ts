@@ -1,7 +1,7 @@
-import { User } from './user';
+import { Profile } from './profile';
 
 export interface MembershipTier {
-    id: number;
+    id: string;
     name: string;
     description?: string;
     price: number;
@@ -14,15 +14,15 @@ export interface MembershipTier {
 }
 
 export interface Membership {
-    id: number;
+    id: string;
     startDate: string;
     endDate: string;
     isActive: boolean;
     createdAt: string;
     updatedAt?: string;
     tier: MembershipTier;
-    subscriber: User;
-    channel: User;
+    subscriber: Profile;
+    channel: Profile;
 }
 
 export interface MembershipTierCreateRequest {

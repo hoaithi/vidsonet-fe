@@ -11,7 +11,6 @@ export const useVideos = () => {
 
   // Search videos
   const searchVideos = async (
-    params: VideoSearchRequest,
     page: number = 0,
     size: number = 10,
     sortBy: string = 'publishedAt',
@@ -20,9 +19,9 @@ export const useVideos = () => {
     setIsLoading(true);
 
     try {
-      const response = await VideoService.searchVideos(params, page, size, sortBy, sortDir);
-      setSearchResults(response.data);
-      return response.data;
+      const response = await VideoService.searchVideos(page, size, sortBy, sortDir);
+      setSearchResults(response.result);
+      return response.result;
     } catch (error: any) {
       console.error('Search videos error:', error);
 
@@ -44,7 +43,7 @@ export const useVideos = () => {
       const response = await VideoService.uploadVideo(data);
 
       toast.success('Video uploaded successfully');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Upload video error:', error);
 
@@ -59,17 +58,17 @@ export const useVideos = () => {
   };
 
   // Get video details
-  const getVideo = async (id: number, userId?: number) => {
+  const getVideo = async (id: string) => {
     setLoading(true);
 
     try {
-      const response = await VideoService.getVideoById(id, userId);
+      const response = await VideoService.getVideoById(id);
 
-      if (response.data) {
-        setCurrentVideo(response.data);
+      if (response.result) {
+        setCurrentVideo(response.result);
       }
 
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get video error:', error);
 
@@ -84,7 +83,7 @@ export const useVideos = () => {
   };
 
   // Update video progress
-  const updateVideoProgress = async (id: number, data: VideoProgressUpdateRequest) => {
+  const updateVideoProgress = async (id: string, data: VideoProgressUpdateRequest) => {
     try {
       await VideoService.updateVideoProgress(id, data);
     } catch (error: any) {
@@ -94,15 +93,15 @@ export const useVideos = () => {
   };
 
   // Like video
-  const likeVideo = async (id: number) => {
+  const likeVideo = async (id: string) => {
     try {
       const response = await VideoService.likeVideo(id);
 
-      if (response.data) {
-        setCurrentVideo(response.data);
+      if (response.result) {
+        setCurrentVideo(response.result);
       }
 
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Like video error:', error);
 
@@ -115,15 +114,15 @@ export const useVideos = () => {
   };
 
   // Dislike video
-  const dislikeVideo = async (id: number) => {
+  const dislikeVideo = async (id: string) => {
     try {
       const response = await VideoService.dislikeVideo(id);
 
-      if (response.data) {
-        setCurrentVideo(response.data);
+      if (response.result) {
+        setCurrentVideo(response.result);
       }
 
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Dislike video error:', error);
 
@@ -136,7 +135,7 @@ export const useVideos = () => {
   };
 
   // Add to watch later
-  const addToWatchLater = async (id: number) => {
+  const addToWatchLater = async (id: string) => {
     try {
       await VideoService.addToWatchLater(id);
 
@@ -164,7 +163,7 @@ export const useVideos = () => {
 
     try {
       const response = await VideoService.getWatchLaterVideos(page, size, sortBy, sortDir);
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Get watch later videos error:', error);
 
@@ -179,18 +178,18 @@ export const useVideos = () => {
   };
 
   // Update video
-  const updateVideo = async (id: number, data: VideoUpdateRequest) => {
+  const updateVideo = async (id: string, data: VideoUpdateRequest) => {
     setIsLoading(true);
 
     try {
       const response = await VideoService.updateVideo(id, data);
 
-      if (response.data) {
-        setCurrentVideo(response.data);
+      if (response.result) {
+        setCurrentVideo(response.result);
       }
 
       toast.success('Video updated successfully');
-      return response.data;
+      return response.result;
     } catch (error: any) {
       console.error('Update video error:', error);
 
@@ -205,7 +204,7 @@ export const useVideos = () => {
   };
 
   // Delete video
-  const deleteVideo = async (id: number) => {
+  const deleteVideo = async (id: string) => {
     setIsLoading(true);
 
     try {
@@ -228,12 +227,12 @@ export const useVideos = () => {
 
   
   const [userReaction, setUserReaction] = useState<UserReactionStatus>({hasLiked:false,hasDisliked:false});
-  const checkUserReaction = async (videoId: number, userId?: number) => {
+  const checkUserReaction = async (videoId: string, userId?: string) => {
       const response = await VideoService.getUserReaction(videoId, userId);
-      if(response.data&&response.data.hasReacted){
+      if(response.result&&response.result.hasReacted){
         setUserReaction({
-          hasLiked: response.data.reactionType === "LIKE",
-          hasDisliked: response.data.reactionType === "DISLIKE"
+          hasLiked: response.result.reactionType === "LIKE",
+          hasDisliked: response.result.reactionType === "DISLIKE"
         })
       }else{
         setUserReaction({

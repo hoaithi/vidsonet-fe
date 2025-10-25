@@ -40,13 +40,13 @@ export default function HistoryContent() {
     useEffect(() => {
         const fetchVideos = async () => {
             if (!isAuthenticated) return;
-
             const historyVideos = await getHistoryVideos();
-            setVideos(historyVideos);
+            if(historyVideos){
+                setVideos(historyVideos.content);
+            }
         };
 
         fetchVideos();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated]);
 
     // Handle remove video

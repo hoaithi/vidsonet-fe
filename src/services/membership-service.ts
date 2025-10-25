@@ -16,26 +16,26 @@ export const MembershipService = {
     },
 
     // Update an existing membership tier
-    updateMembershipTier: async (tierId: number, data: MembershipTierUpdateRequest): Promise<ApiResponse<MembershipTier>> => {
+    updateMembershipTier: async (tierId: string, data: MembershipTierUpdateRequest): Promise<ApiResponse<MembershipTier>> => {
         const response = await apiClient.put<ApiResponse<MembershipTier>>(`/memberships/tiers/${tierId}`, data);
         return response.data;
     },
 
     // Delete a membership tier
-    deleteMembershipTier: async (tierId: number): Promise<ApiResponse<void>> => {
+    deleteMembershipTier: async (tierId: string): Promise<ApiResponse<void>> => {
         const response = await apiClient.delete<ApiResponse<void>>(`/memberships/tiers/${tierId}`);
         return response.data;
     },
 
     // Get all membership tiers for a channel
-    getChannelMembershipTiers: async (channelId: number): Promise<ApiResponse<MembershipTier[]>> => {
+    getChannelMembershipTiers: async (channelId: string): Promise<ApiResponse<MembershipTier[]>> => {
         const response = await apiClient.get<ApiResponse<MembershipTier[]>>(`/memberships/tiers/channel/${channelId}`);
         console.log('Membership tiers:', response.data);
         return response.data;
     },
 
     // Get a specific membership tier
-    getMembershipTierById: async (tierId: number): Promise<ApiResponse<MembershipTier>> => {
+    getMembershipTierById: async (tierId: string): Promise<ApiResponse<MembershipTier>> => {
         const response = await apiClient.get<ApiResponse<MembershipTier>>(`/memberships/tiers/${tierId}`);
         return response.data;
     },
@@ -47,13 +47,13 @@ export const MembershipService = {
     },
 
     // Get all members for a channel (if you're the channel owner)
-    getChannelMembers: async (channelId: number): Promise<ApiResponse<Membership[]>> => {
+    getChannelMembers: async (channelId: string): Promise<ApiResponse<Membership[]>> => {
         const response = await apiClient.get<ApiResponse<Membership[]>>(`/memberships/channel/${channelId}`);
         return response.data;
     },
 
     // Check if user has an active membership for a channel
-    checkMembership: async (channelId: number): Promise<ApiResponse<boolean>> => {
+    checkMembership: async (channelId: string): Promise<ApiResponse<boolean>> => {
         const response = await apiClient.get<ApiResponse<boolean>>('/memberships/check', {
             params: { channelId }
         });
@@ -61,7 +61,7 @@ export const MembershipService = {
     },
 
     // Create a PayPal payment for a membership tier
-    createPayment: async (membershipTierId: number): Promise<ApiResponse<CreatePaymentResponse>> => {
+    createPayment: async (membershipTierId: string): Promise<ApiResponse<CreatePaymentResponse>> => {
         const response = await apiClient.post<ApiResponse<CreatePaymentResponse>>('/payments/create', null, {
             params: { membershipTierId }
         });

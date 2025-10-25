@@ -38,11 +38,11 @@ export const videoUploadSchema = z.object({
   title: z.string()
     .min(3, 'Title must be at least 3 characters')
     .max(100, 'Title must be at most 100 characters'),
-  description: z.string().max(5000, 'Description must be at most 5000 characters').optional(),
+  description: z.string().max(5000, 'Description must be at most 5000 characters'),
   categoryIds: z.array(z.number()).optional(),
   isPremium: z.boolean(),
   videoFile: z.instanceof(File, { message: 'Video file is required' }),
-  thumbnailFile: z.instanceof(File, { message: 'Thumbnail is required' }).optional(),
+  thumbnailFile: z.instanceof(File, { message: 'Thumbnail is required' }),
 });
 
 // Video update schema
@@ -68,13 +68,12 @@ export const replySchema = z.object({
   content: z.string()
     .min(1, 'Reply cannot be empty')
     .max(1000, 'Reply must be at most 1000 characters'),
-  parentId: z.number(),
+  parentId: z.string(),
 });
 
 // Video search schema
 export const videoSearchSchema = z.object({
   keyword: z.string().optional(),
-  categoryId: z.number().optional(),
-  userId: z.number().optional(),
+  userId: z.string().optional(),
   isPremium: z.boolean().optional(),
 });

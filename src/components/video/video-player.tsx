@@ -17,7 +17,7 @@ import { VideoProgressUpdateRequest } from '@/types/video';
 
 interface VideoPlayerProps {
   videoUrl: string;
-  videoId: number;
+  videoId: string;
   onProgressUpdate?: (progress: VideoProgressUpdateRequest) => void;
   initialProgress?: number;
   autoPlay?: boolean;
@@ -165,8 +165,6 @@ useEffect(() => {
 }, [hasCompleted]);
 
 
-
-
   // Update progress on component unmount or when video changes
   useEffect(() => {
   const handleBeforeUnload = () => {
@@ -189,6 +187,7 @@ useEffect(() => {
       }
     }
   };
+
 
   // Gọi khi user reload hoặc đóng tab
   window.addEventListener("beforeunload", handleBeforeUnload);

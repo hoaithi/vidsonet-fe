@@ -27,8 +27,7 @@ export default function AuthLayout({
         <Link href="/" className="font-bold text-lg">
           VidsoNet
         </Link>
-      </header>
-      <Sidebar />      
+      </header>    
       <main className="flex-1 flex items-center justify-center p-6">
         {children}
       </main>

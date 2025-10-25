@@ -38,10 +38,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/auth-store";
 import { useNotificationStore } from "@/store/notification-store";
 import { useAuth } from "@/lib/hooks/use-auth";
-import { useUser } from "@/lib/hooks/use-user";
 
 export function Navbar() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
   const { unreadCount } = useNotificationStore();
   const { logout } = useAuth();
   const router = useRouter();
@@ -308,11 +307,12 @@ export function Navbar() {
                   <Button variant="ghost" size="icon" className="rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarImage
-                        src={user?.profilePicture || ""}
-                        alt={user?.username || "User"}
+                        referrerPolicy="no-referrer"
+                        src={profile?.avatarUrl || ""}
+                        alt={profile?.fullName || "User"}
                       />
                       <AvatarFallback>
-                        {user?.username?.charAt(0)?.toUpperCase() || "U"}
+                        {profile?.fullName?.charAt(0)?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -322,7 +322,7 @@ export function Navbar() {
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
                     <DropdownMenuItem
-                      onClick={() => router.push(`/channel/${user?.id}`)}
+                      onClick={() => router.push(`/profile/${profile?.id}`)}
                     >
                       <UserIcon className="mr-2 h-4 w-4" />
                       <span>Your Channel</span>

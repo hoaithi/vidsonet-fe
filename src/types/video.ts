@@ -1,4 +1,4 @@
-import { User } from './user';
+import { Profile } from './profile';
 
 export interface Category {
   id: number;
@@ -7,29 +7,29 @@ export interface Category {
 }
 
 export interface Video {
-  id: number;
+  id: string;
   title: string;
-  description?: string;
+  description: string;
   videoUrl: string;
-  thumbnailUrl?: string;
+  thumbnailUrl: string;
   duration: number;
   viewCount: number;
   likeCount: number;
   dislikeCount: number;
   isPremium: boolean;
   publishedAt: string;
-  user: User;
-  categories?: Category[];
+  profileId: string;
+  profileImage: string;
+  profileName: string;
   currentProgress?: number;
 }
 
 export interface VideoUpload {
   title: string;
-  description?: string;
-  categoryIds?: number[];
+  description: string;
   isPremium: boolean;
   videoFile: File;
-  thumbnailFile?: File;
+  thumbnailFile: File;
 }
 
 export interface VideoUpdateRequest {
@@ -54,16 +54,16 @@ export interface VideoSearchRequest {
 }
 
 export interface Comment {
-  id: number;
+  id: string;
   content: string;
   createdAt: string;
   updatedAt?: string;
   likeCount: number;
   dislikeCount: number;
   isPinned: boolean;
-  isHearted: boolean;
+  hearted: boolean;
   heartedAt?: string;
-  user: User;
+  owner: Profile;
   videoId: number;
   parentId?: number;
   replies?: Comment[];
@@ -71,8 +71,9 @@ export interface Comment {
 
 export interface CommentCreateRequest {
   content: string;
-  videoId: number;
-  parentId?: number;
+  itemId: string;
+  commentType: string;
+  parentId?: string;
 }
 
 export interface CommentUpdateRequest {
