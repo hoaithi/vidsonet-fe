@@ -137,7 +137,7 @@ export const useUser = () => {
     getCurrentUser,
     getUserById,
     getChannelByUserId,
-    updateProfile,
+    updateProfile: updateProfileUser,
     getUserSubscriptions,
   };
 };

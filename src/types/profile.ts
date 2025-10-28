@@ -5,18 +5,20 @@ export interface Profile {
     avatarUrl?: string;
     bannerUrl?: string;
     fullName?: string;
+    city?: string;
+    dob?: string; 
     description?: string;
     subscriberCount?: number;
     createdAt?: string;
+    hasPassword?: boolean
   }
   
   export interface UpdateProfileRequest {
-    username?: string;
-    email?: string;
+    fullName?: string;
+    city?: string;
+    dob?: string; // ISO date string (YYYY-MM-DD)
+    description?: string;
     profilePicture?: File;
-    channelName?: string;
-    channelDescription?: string;
-    channelPicture?: File;
     bannerImage?: File;
   }
   

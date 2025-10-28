@@ -52,8 +52,8 @@ export default function ExplorePage() {
     const fetchCategories = async () => {
       try {
         const response = await CategoryService.getAllCategories();
-        if (response.data) {
-          setCategories(response.data);
+        if (response.result) {
+          setCategories(response.result);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -90,8 +90,8 @@ export default function ExplorePage() {
         isPremium: isPremium,
       }, page, 3, sortBy, sortDir);
       
-      if (response.data) {
-        let newVideos = response.data.content;
+      if (response.result) {
+        let newVideos = response.result.content;
         
         // Apply duration filter on frontend since backend doesn't support it
         if (durationFilter !== 'all') {
@@ -120,7 +120,7 @@ export default function ExplorePage() {
         }
         
         setTotalVideos(newVideos.length); // Update with filtered count
-        setHasMore(!response.data.last && newVideos.length > 0);
+        setHasMore(!response.result.last && newVideos.length > 0);
       }
     } catch (error) {
       console.error('Error searching videos:', error);

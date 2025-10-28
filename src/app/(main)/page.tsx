@@ -6,10 +6,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import VideoGrid from '@/components/video/video-grid';
 import { VideoService } from '@/services/video-service';
 import { Video } from '@/types/video';
+import PasswordDialog from '@/components/auth/password-dialog';
+import { useAuthStore } from '@/store/auth-store';
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const profile = useAuthStore((s) => s.profile);
+  
 
   // Fetch videos and categories
   useEffect(() => {
@@ -32,9 +37,17 @@ export default function HomePage() {
     fetchData();
   }, []);
 
+  // Show password dialog if user is authenticated and has no password
+  useEffect(() => {
+    if (profile && profile.hasPassword === false) {
+      setShowPasswordDialog(true);
+    }
+  }, [profile]);
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Discover Videos</h1>
+      <PasswordDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} />
       
       <Tabs defaultValue="all">
         <div className="border-b mb-6 overflow-x-auto">

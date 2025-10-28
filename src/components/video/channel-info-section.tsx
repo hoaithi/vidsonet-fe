@@ -16,6 +16,7 @@ interface ChannelInfoSectionProps {
   isSubscribed: boolean;
   isLoading?: boolean;
   onToggleSubscribe: () => Promise<void>;
+  isOwner?: boolean;
 }
 
 export default function ChannelInfoSection({
@@ -23,6 +24,7 @@ export default function ChannelInfoSection({
   isSubscribed,
   isLoading = false,
   onToggleSubscribe,
+  isOwner = false,
 }: ChannelInfoSectionProps) {
   return (
     <div className="flex items-center justify-between border-b pb-4">
@@ -47,17 +49,18 @@ export default function ChannelInfoSection({
           </p>
         </div>
       </div>
-
-      <Button
-        variant={isSubscribed ? "secondary" : "default"}
-        size="sm"
-        onClick={onToggleSubscribe}
-        disabled={isLoading}
-        className="flex items-center gap-1"
-      >
-        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-        {isSubscribed ? "Subscribed" : "Subscribe"}
-      </Button>
+      {!isOwner && (
+        <Button
+          variant={isSubscribed ? "secondary" : "default"}
+          size="sm"
+          onClick={onToggleSubscribe}
+          disabled={isLoading}
+          className="flex items-center gap-1"
+        >
+          {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {isSubscribed ? "Subscribed" : "Subscribe"}
+        </Button>
+      )}
     </div>
   );
 }

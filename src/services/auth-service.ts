@@ -4,7 +4,7 @@ import { GoogleLoginRequest, LoginRequest, RegisterRequest, AuthResponse } from 
 export const AuthService = {
   // Register a new user
   register: async (data: RegisterRequest): Promise<ApiResponse<void>> => {
-    const response = await apiClient.post<ApiResponse<void>>('/identity/auth/register', data);
+    const response = await apiClient.post<ApiResponse<void>>('/identity/users/register', data);
     return response.data;
   },
 
@@ -26,6 +26,24 @@ export const AuthService = {
       '/identity/auth/refresh-token',
       null,
       { params: { refreshToken } }
+    );
+    return response.data;
+  }
+,
+
+  // Set or reset user password (first-time set for social accounts or reset)
+  // Accepts email so backend knows which account to set the password for.
+  resetPassword: async (
+    email: string,
+    newPassword: string,
+    otp?: string
+  ): Promise<ApiResponse<void>> => {
+    const payload: Record<string, any> = { email, newPassword };
+    if (otp) payload.otp = otp;
+
+    const response = await apiClient.post<ApiResponse<void>>(
+      '/identity/auth/create-password',
+      payload
     );
     return response.data;
   }

@@ -25,7 +25,7 @@ export const PlaylistService = {
     };
 
     const response = await apiClient.get<ApiResponse<PaginatedResponse<Video>>>(
-      "/video/history",
+      "/playlist/history",
       { params: queryParams }
     );
     return response.data;
@@ -34,7 +34,7 @@ export const PlaylistService = {
   // Remove video from watch later
   removeFromWatchLater: async (videoId: string): Promise<ApiResponse<void>> => {
     const response = await apiClient.delete<ApiResponse<void>>(
-      `/video/watch-later/${videoId}`
+      `/playlist/watch-later/${videoId}`
     );
     return response.data;
   },
@@ -42,7 +42,7 @@ export const PlaylistService = {
   // Remove video from history
   removeFromHistory: async (videoId: string): Promise<ApiResponse<void>> => {
     const response = await apiClient.delete<ApiResponse<void>>(
-      `/playlists/history/${videoId}`
+      `/playlist/history/${videoId}`
     );
     return response.data;
   },
@@ -50,7 +50,7 @@ export const PlaylistService = {
   // Clear history
   clearHistory: async (): Promise<ApiResponse<void>> => {
     const response = await apiClient.delete<ApiResponse<void>>(
-      "/playlists/history/clear"
+      "/playlist/history/clear"
     );
     return response.data;
   },

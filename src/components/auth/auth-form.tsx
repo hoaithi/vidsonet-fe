@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/hooks/use-auth";
-import { loginSchema, registerSchema } from "@/lib/validation";
+import { loginSchema, registerSchemaWithDob as registerSchema } from "@/lib/validation";
 
 interface AuthFormProps {
   type: "login" | "register";
@@ -172,6 +172,9 @@ function RegisterForm({
       email: "",
       password: "",
       confirmPassword: "",
+      fullName: "",
+      dob: "",
+      city: "",
     },
   });
 
@@ -216,6 +219,48 @@ function RegisterForm({
                     placeholder="email@example.com"
                     {...field}
                   />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="fullName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Full name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="dob"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Date of birth</FormLabel>
+                <FormControl>
+                  <Input type="date" placeholder="YYYY-MM-DD" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>City</FormLabel>
+                <FormControl>
+                  <Input placeholder="City" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

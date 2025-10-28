@@ -69,17 +69,24 @@ export const VideoService = {
 
   // Search videos
   searchVideos: async (
+    filters?: { keyword?: string; categoryId?: number; isPremium?: boolean },
     page: number = 0,
     size: number = 12,
     sortBy: string = "publishedAt",
     sortDir: "asc" | "desc" = "desc"
   ): Promise<ApiResponse<PaginatedResponse<Video>>> => {
-    const queryParams = {
+    const queryParams: Record<string, any> = {
       page,
       size,
       sortBy,
       sortDir,
     };
+
+    if (filters) {
+      if (filters.keyword) queryParams.keyword = filters.keyword;
+      if (typeof filters.categoryId === "number") queryParams.categoryId = filters.categoryId;
+      if (typeof filters.isPremium === "boolean") queryParams.isPremium = filters.isPremium;
+    }
 
     const response = await apiClient.get<ApiResponse<PaginatedResponse<Video>>>(
       "/video/search",
@@ -103,7 +110,7 @@ export const VideoService = {
     };
 
     const response = await apiClient.get<ApiResponse<PaginatedResponse<Video>>>(
-      "/video/watch-later",
+      "/playlist/watch-later",
       { params: queryParams }
     );
     return response.data;

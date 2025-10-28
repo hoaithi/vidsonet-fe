@@ -5,8 +5,11 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   username: string;
-  email: string;
   password: string;
+  fullName?: string;
+  dob?: string; // ISO date string (YYYY-MM-DD)
+  email: string;
+  city?: string;
 }
 
 export interface AuthResponse {

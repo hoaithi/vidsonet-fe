@@ -23,29 +23,26 @@ export const ProfileService = {
   // Update user profile
   updateProfile: async (id: string, data: UpdateProfileRequest): Promise<ApiResponse<Profile>> => {
     const formData = new FormData;
-    if(data.username){
-      formData.append('username', data.username);
+    if(data.fullName){
+      formData.append('fullName', data.fullName);
     }
-    if(data.email){
-      formData.append('email', data.email);
+    if(data.city){
+      formData.append('city', data.city);
     }
-    if(data.channelName){
-      formData.append('channelName', data.channelName);
+    if(data.dob){
+      formData.append('dob', data.dob);
     }
-    if(data.channelDescription){
-      formData.append('channelDescription', data.channelDescription);
+    if(data.description){
+      formData.append('description', data.description);
     }
     if(data.profilePicture){
-      formData.append('profilePicture', data.profilePicture);
+      formData.append('avatar', data.profilePicture);
     }
     if(data.bannerImage){
-      formData.append('bannerImage', data.bannerImage);
-    }
-    if(data.channelPicture){
-      formData.append('channelPicture', data.channelPicture);
+      formData.append('banner', data.bannerImage);
     }
     const response = await apiClient.put<ApiResponse<Profile>>(
-      `/users/${id}`, 
+      `/profile/${id}`, 
       formData,
       {
         headers: {

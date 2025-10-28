@@ -343,6 +343,7 @@ export default function VideoDetailPage() {
           }}
           isSubscribed={isSubscribed}
           onToggleSubscribe={handleSubscriptionToggle}
+          isOwner={isOwner}
         />
 
         {/* Description */}
