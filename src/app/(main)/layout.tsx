@@ -1,12 +1,11 @@
-'use client';
-
-import { useEffect } from 'react';
-import { Navbar } from '@/components/layout/navbar';
-import { Sidebar } from '@/components/layout/sidebar';
-import { useAuthStore } from '@/store/auth-store';
-import { useNotificationStore } from '@/store/notification-store';
-import ProfileService from '@/services/profile-service';
-import NotificationService from '@/services/notification-service';
+"use client";
+import { useEffect } from "react";
+import { Navbar } from "@/components/layout/navbar";
+import { Sidebar } from "@/components/layout/sidebar";
+import { useAuthStore } from "@/store/auth-store";
+import { useNotificationStore } from "@/store/notification-store";
+import ProfileService from "@/services/profile-service";
+import NotificationService from "@/services/notification-service";
 
 export default function MainLayout({
   children,
@@ -26,10 +25,10 @@ export default function MainLayout({
             updateProfile(response.result);
           }
         } catch (error) {
-          console.error('Failed to fetch user data:', error);
+          console.error("Failed to fetch user data:", error);
         }
       };
-      
+
       fetchUserData();
     }
   }, [isAuthenticated, profile, updateProfile]);
@@ -44,15 +43,15 @@ export default function MainLayout({
             setUnreadCount(response.result);
           }
         } catch (error) {
-          console.error('Failed to fetch notification count:', error);
+          console.error("Failed to fetch notification count:", error);
         }
       };
-      
+
       fetchNotificationCount();
-      
+
       // Set up polling for notifications (every 2 minutes)
       const interval = setInterval(fetchNotificationCount, 2 * 60 * 1000);
-      
+
       return () => clearInterval(interval);
     }
   }, [isAuthenticated, setUnreadCount]);
@@ -62,9 +61,10 @@ export default function MainLayout({
       <Navbar />
       <div className="pt-16 md:pl-56">
         <Sidebar />
-        <main className="container py-6 ml-2">
+        {/* <main className="container py-6 ml-2">
           {children}
-        </main>
+        </main> */}
+        <main className="container">{children}</main>
       </div>
     </div>
   );
