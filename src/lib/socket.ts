@@ -1,5 +1,4 @@
-import { io, Socket } from "socket.io-client";
-let socket: Socket | null = null;
+import { io, Socket } from "socket.io-client";let socket: Socket | null = null;
 
 export const getSocket = (token?: string): Socket => {
   // Chỉ tạo socket trên client
@@ -17,7 +16,7 @@ export const getSocket = (token?: string): Socket => {
         },
         query: {
           // userId: getUserId(), // lấy từ decoded token
-          userId: "673145fe-04a3-4f6d-ad27-7694bc087fd4",
+          userId: "66bd2174-9e71-4cb6-9240-3caec5680e82",
         },
         transports: ["websocket", "polling"],
         reconnection: true,

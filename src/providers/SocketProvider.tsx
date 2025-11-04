@@ -7,7 +7,8 @@ interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
   connectionStatus: "connecting" | "connected" | "disconnected" | "error";
-  onlineUsers: string[]; // ✅ Thêm danh sách user online
+  onlineUsers: string[];
+  currentUser: string; // ✅ Thêm danh sách user online
 }
 
 const SocketContext = createContext<SocketContextType>({
@@ -15,6 +16,7 @@ const SocketContext = createContext<SocketContextType>({
   isConnected: false,
   connectionStatus: "disconnected",
   onlineUsers: [], // ✅ Default empty
+  currentUser: "",
 });
 
 export const useSocketContext = () => useContext(SocketContext);
@@ -22,6 +24,7 @@ export const useSocketContext = () => useContext(SocketContext);
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected" | "error"
   >("disconnected");
@@ -59,6 +62,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         }) => {
           console.log("✅ Server confirmed connection:", data);
           setOnlineUsers(data.onlineUsers); // ✅ Set initial online users
+          setCurrentUser(data?.userId);
         }
       );
 
@@ -157,7 +161,13 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SocketContext.Provider
-      value={{ socket, isConnected, connectionStatus, onlineUsers }}
+      value={{
+        socket,
+        isConnected,
+        connectionStatus,
+        onlineUsers,
+        currentUser,
+      }}
     >
       {children}
     </SocketContext.Provider>
