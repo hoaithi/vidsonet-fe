@@ -1,4 +1,3 @@
-import { Conversation } from "@/app/(main)/chat/page";
 export interface Message {
   id: string;
   text: string;
@@ -9,18 +8,39 @@ export interface Message {
   reaction?: string;
 }
 
-// Interface cho Conversation
-// export interface Conversation {
-//   id: string;
-//   name: string;
-//   avatar: string;
-//   lastMessage: string;
-//   timestamp: string;
-//   unread: boolean;
-//   isOnline: boolean;
-//   lastSeen?: string;
-//   messageCount?: number;
-// }
+export type MessageStatus = "sending" | "sent" | "delivered" | "read";
+
+export interface Conversation {
+  id: string;
+  name: string;
+  avatar: string;
+  lastMessage: string;
+  timestamp: string;
+  unread: boolean;
+  isOnline: boolean;
+  lastSeen?: string;
+  messageCount?: number;
+  receiverId?: string;
+}
+
+export interface Message {
+  id: string;
+  text: string;
+  sender: "user" | "friend";
+  timestamp: string;
+  senderName?: string;
+  avatar?: string;
+  reaction?: string;
+
+  // Status tracking
+  status?: MessageStatus;
+  tempId?: string; // For optimistic updates
+  isSent?: boolean;
+  isDelivered?: boolean;
+  isRead?: boolean;
+  deliveredAt?: string;
+  readAt?: string;
+}
 
 export interface ConversationMessagesResponse {
   conversation: Conversation;
