@@ -1,5 +1,4 @@
-"use client";
-import { useEffect } from "react";
+"use client";import { useEffect } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useAuthStore } from "@/store/auth-store";
@@ -59,13 +58,13 @@ export default function MainLayout({
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="pt-16 md:pl-56">
-        <Sidebar />
-        {/* <main className="container py-6 ml-2">
+      {/* <div className="pt-16 md:pl-56"> */}
+      <Sidebar />
+      {/* <main className="container py-6 ml-2">
           {children}
         </main> */}
-        <main className="container">{children}</main>
-      </div>
+      <main className="container">{children}</main>
+      {/* </div> */}
     </div>
   );
 }
