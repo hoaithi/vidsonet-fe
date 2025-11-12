@@ -1,6 +1,4 @@
-"use client";
-
-import { Input } from "@/components/ui/input";
+"use client";import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 import {
@@ -15,10 +13,12 @@ import {
   Clock,
   Image as ImageIcon,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { chatService } from "@/services/chat-service";
 import { Conversation, ConversationList, Message } from "@/types/chat";
 import { useSocketContext } from "@/providers/SocketProvider";
+import { Trash } from "lucide-react";
+import { useAuthStore } from "@/store/auth-store";
 
 const CURRENT_USER_ID = "66bd2174-9e71-4cb6-9240-3caec5680e82";
 
@@ -67,7 +67,6 @@ function MessageStatusIcon({
 function getMessageStatus(
   message: Message
 ): "sending" | "sent" | "delivered" | "read" | undefined {
-  // Only show status for user's own messages
   if (message.sender !== "user") return undefined;
 
   if (message.status) return message.status;
@@ -92,7 +91,15 @@ export default function ChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const { profile } = useAuthStore();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
   const { socket, isConnected, onlineUsers, currentUser } = useSocketContext();
+
+  // ✅ Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   // ✅ Update online status
   useEffect(() => {
@@ -159,21 +166,21 @@ export default function ChatPage() {
 
   // ✅ Mark messages as seen when conversation is opened
   useEffect(() => {
-    if (activeConversation && socket) {
+    if (activeConversation && socket && profile?.userId) {
       const timer = setTimeout(() => {
         socket.emit("markAsSeen", {
           conversationId: activeConversation.id,
-          userId: CURRENT_USER_ID,
+          userId: profile.userId,
         });
       }, 500);
 
       return () => clearTimeout(timer);
     }
-  }, [activeConversation, socket]);
+  }, [activeConversation, socket, profile?.userId]);
 
   // ✅ Socket listeners for message status updates
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !profile?.userId) return;
 
     console.log("🎧 Listening for message status events...");
 
@@ -208,19 +215,17 @@ export default function ChatPage() {
     }) => {
       console.log("✅✅ Message delivered:", data);
 
-      if (activeConversation?.id === data.conversationId) {
-        setListMessagesConversation((prev) =>
-          prev.map((msg) =>
-            msg.id === data.messageId
-              ? {
-                  ...msg,
-                  status: "delivered",
-                  isDelivered: true,
-                }
-              : msg
-          )
-        );
-      }
+      setListMessagesConversation((prev) =>
+        prev.map((msg) =>
+          msg.id === data.messageId
+            ? {
+                ...msg,
+                status: "delivered",
+                isDelivered: true,
+              }
+            : msg
+        )
+      );
     };
 
     // 3. Messages seen
@@ -231,93 +236,140 @@ export default function ChatPage() {
     }) => {
       console.log("👀 Messages seen:", data);
 
-      if (activeConversation?.id === data.conversationId) {
-        setListMessagesConversation((prev) =>
-          prev.map((msg) =>
-            msg.sender === "user"
-              ? {
-                  ...msg,
-                  status: "read",
-                  isRead: true,
-                }
-              : msg
-          )
-        );
-      }
+      setListMessagesConversation((prev) =>
+        prev.map((msg) =>
+          msg.sender === "user"
+            ? {
+                ...msg,
+                status: "read",
+                isRead: true,
+              }
+            : msg
+        )
+      );
     };
 
-    // 4. Message error
+    // 4. Message error - ✅ FIX: Use callback to avoid stale closure
     const handleMessageError = (data: { tempId: string; error: string }) => {
       console.error("❌ Message error:", data);
 
-      const failedMsg = listMessagesConversations.find(
-        (m) => m.tempId === data.tempId
-      );
-      if (failedMsg) {
-        setNewMessage(failedMsg.text);
-      }
-
-      setListMessagesConversation((prev) =>
-        prev.filter((msg) => msg.tempId !== data.tempId)
-      );
+      setListMessagesConversation((prev) => {
+        const failedMsg = prev.find((m) => m.tempId === data.tempId);
+        if (failedMsg) {
+          setNewMessage(failedMsg.text);
+        }
+        return prev.filter((msg) => msg.tempId !== data.tempId);
+      });
     };
 
-    // 5. Incoming new message
+    // 5. Incoming new message - ✅ FIX: Improved logic
     const handleNewMessage = (data: any) => {
       console.log("💬 New message received:", data);
+      console.log("📝 Message data structure:", {
+        conversationId: data.conversation?.id,
+        messageId: data.message?.id,
+        senderId: data.message?.senderId,
+        receiverId: data.message?.receiverId,
+        content: data.message?.content,
+      });
+
+      // ✅ Validate data structure
+      if (!data.message || !data.conversation) {
+        console.error("❌ Invalid message data structure");
+        return;
+      }
 
       const newMessage: Message = {
         id: data.message.id,
         text: data.message.content,
         sender: "friend",
-        timestamp: data.message.timestamp,
-        senderName: data.message.senderName,
+        timestamp:
+          data.message.timestamp ||
+          new Date().toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        senderName: data.message.senderName || data.conversation.name,
         avatar: data.conversation.avatar,
-        status: undefined, // No status for received messages
+        status: undefined,
       };
 
-      // ✅ Nếu đang mở đúng conversation → thêm tin nhắn
-      if (
-        activeConversation &&
-        data.conversation.id === activeConversation.id
-      ) {
-        setListMessagesConversation((prev) => [...prev, newMessage]);
+      // ✅ Check if message is for current active conversation
+      const isActiveConversation =
+        activeConversation && data.conversation.id === activeConversation.id;
+
+      console.log("🔍 Conversation check:", {
+        isActiveConversation,
+        activeConvId: activeConversation?.id,
+        dataConvId: data.conversation.id,
+      });
+
+      // ✅ Add message if conversation is active
+      if (isActiveConversation) {
+        setListMessagesConversation((prev) => {
+          // Prevent duplicate messages
+          if (prev.some((msg) => msg.id === newMessage.id)) {
+            console.log("⚠️ Duplicate message prevented");
+            return prev;
+          }
+          return [...prev, newMessage];
+        });
+
+        // ✅ Auto-scroll to bottom
+        setTimeout(() => scrollToBottom(), 100);
 
         // ✅ Auto-mark as seen
         socket.emit("markAsSeen", {
           conversationId: activeConversation.id,
-          userId: CURRENT_USER_ID,
+          userId: profile.userId,
         });
       }
 
-      // ✅ Cập nhật listConversation (nếu có → update, nếu chưa → thêm mới)
+      // ✅ Update conversation list
       setListConversation((prev) => {
         const exists = prev.some((conv) => conv.id === data.conversation.id);
 
         if (exists) {
-          // 👉 Update conversation đã có
-          return prev.map((conv) =>
-            conv.id === data.conversation.id
-              ? {
-                  ...conv,
-                  lastMessage: data.message.content,
-                  timestamp: data.message.timestamp,
-                  unread: activeConversation?.id !== data.conversation.id,
-                }
-              : conv
-          );
+          return prev
+            .map((conv) =>
+              conv.id === data.conversation.id
+                ? {
+                    ...conv,
+                    lastMessage: data.message.content,
+                    timestamp:
+                      data.message.timestamp ||
+                      new Date().toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
+                    unread: !isActiveConversation, // Only mark unread if not active
+                  }
+                : conv
+            )
+            .sort((a, b) => {
+              // Move updated conversation to top
+              if (a.id === data.conversation.id) return -1;
+              if (b.id === data.conversation.id) return 1;
+              return 0;
+            });
         } else {
-          // 👉 Thêm conversation mới (người lần đầu nhắn đến)
-          const newConv = {
+          // Add new conversation
+          const newConv: Conversation = {
             id: data.conversation.id,
             name: data.conversation.name,
             avatar: data.conversation.avatar,
             lastMessage: data.message.content,
-            timestamp: data.conversation.timestamp,
+            timestamp:
+              data.message.timestamp ||
+              new Date().toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
             unread: true,
-            isOnline: false,
+            isOnline: onlineUsers.includes(data.conversation.receiverId || ""),
+            receiverId: data.conversation.receiverId,
           };
-          return [newConv, ...prev]; // thêm lên đầu danh sách
+          return [newConv, ...prev];
         }
       });
     };
@@ -335,21 +387,30 @@ export default function ChatPage() {
       socket.off("messageError", handleMessageError);
       socket.off("newMessage", handleNewMessage);
     };
-  }, [socket, activeConversation, listMessagesConversations]);
+  }, [
+    socket,
+    activeConversation,
+    profile?.userId,
+    onlineUsers,
+    scrollToBottom,
+  ]);
 
   useEffect(() => {
-    getListConversation();
-  }, []);
+    if (profile?.userId) {
+      getListConversation();
+    }
+  }, [profile?.userId]);
 
   useEffect(() => {
-    if (activeConversation) {
+    if (activeConversation && profile?.userId) {
       getListMessageConversation(activeConversation.id);
     }
-  }, [activeConversation]);
+  }, [activeConversation?.id, profile?.userId]);
 
+  // ✅ Auto-scroll when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [listMessagesConversations]);
+    scrollToBottom();
+  }, [listMessagesConversations, scrollToBottom]);
 
   const formatLastSeen = (timestamp: string): string => {
     const now = new Date();
@@ -369,12 +430,13 @@ export default function ChatPage() {
   };
 
   const getListConversation = async () => {
+    console.log("profile?.userId", profile?.userId);
+
     try {
-      const res = await chatService.getConversation(CURRENT_USER_ID);
+      const res = await chatService.getConversation(profile?.userId!);
       console.log("✅ Conversations loaded:", res);
       if (res) {
         setListConversation(res);
-        // ❌ Removed auto-selection - user must click to open chat
       }
     } catch (error) {
       console.error("❌ Error loading conversations:", error);
@@ -382,11 +444,14 @@ export default function ChatPage() {
   };
 
   const getListMessageConversation = async (conversationId: string) => {
+    if (!profile?.userId) return;
     try {
-      const res = await chatService.getMessagesConversation(conversationId);
+      const res = await chatService.getMessagesConversation(
+        conversationId,
+        profile.userId
+      );
       console.log("✅ Messages loaded:", res?.messages);
       if (res) {
-        // Transform messages to include status
         const messagesWithStatus = res.messages.map((msg: any) => ({
           ...msg,
           status:
@@ -407,6 +472,27 @@ export default function ChatPage() {
     }
   };
 
+  const handleDeleteConversation = async (activeConversation: Conversation) => {
+    if (!activeConversation) return;
+    try {
+      await chatService.deleteConversation(
+        activeConversation.id,
+        profile?.userId!
+      );
+
+      setListConversation((prev) =>
+        prev.filter((conv) => conv.id !== activeConversation.id)
+      );
+      setActiveConversation(null);
+      setListMessagesConversation([]);
+      console.log(`Đã xóa cuộc trò chuyện ID: ${activeConversation.id}`);
+    } catch (error) {
+      console.error("Lỗi khi xóa cuộc trò chuyện:", error);
+    } finally {
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
   const filteredConversations = listConversations.filter(
     (conv) =>
       conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -414,8 +500,15 @@ export default function ChatPage() {
   );
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !activeConversation || !socket) return;
+    if (
+      !newMessage.trim() ||
+      !activeConversation ||
+      !socket ||
+      !profile?.userId
+    )
+      return;
 
+    console.log("📤 Sending message:", newMessage);
     const tempId = `temp-${Date.now()}-${Math.random()}`;
     const messageText = newMessage;
     setNewMessage("");
@@ -426,8 +519,8 @@ export default function ChatPage() {
       tempId,
       text: messageText,
       sender: "user",
-      timestamp: new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
+      timestamp: new Date().toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
         minute: "2-digit",
       }),
       status: "sending",
@@ -435,9 +528,12 @@ export default function ChatPage() {
 
     setListMessagesConversation((prev) => [...prev, optimisticMessage]);
 
+    // ✅ Auto-scroll after sending
+    setTimeout(() => scrollToBottom(), 100);
+
     // Send via WebSocket
     socket.emit("sendMessage", {
-      senderId: CURRENT_USER_ID,
+      senderId: profile.userId,
       receiverId: activeConversation.receiverId,
       content: messageText,
       conversationId: activeConversation.id,
@@ -451,7 +547,10 @@ export default function ChatPage() {
           ? {
               ...conv,
               lastMessage: messageText,
-              timestamp: new Date().toLocaleTimeString(),
+              timestamp: new Date().toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
             }
           : conv
       )
@@ -616,6 +715,13 @@ export default function ChatPage() {
                   <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center">
                     <Video className="w-5 h-5" />
                   </button>
+                  <button
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="text-red-600 hover:bg-red-50 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center"
+                    title="Xóa cuộc trò chuyện"
+                  >
+                    <Trash className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -694,7 +800,6 @@ export default function ChatPage() {
                         </div>
                       </div>
 
-                      {/* ✅ Timestamp and Status Row */}
                       <div
                         className={cn(
                           "mt-1 px-3 flex items-center gap-1.5",
@@ -797,6 +902,38 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* ✅ COMPONENT MÔ PHỎ DIALOG XÁC NHẬN XÓA (Bạn cần thay thế bằng component Dialog thực tế) */}
+      {isDeleteDialogOpen && activeConversation && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
+            <h3 className="text-lg font-bold text-red-600 mb-2">
+              Xóa cuộc trò chuyện?
+            </h3>
+            <p className="text-gray-700 mb-4">
+              Bạn có chắc chắn muốn **xóa cuộc trò chuyện** với **
+              {activeConversation.name}**? Hành động này không thể hoàn tác.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  handleDeleteConversation(activeConversation);
+                }}
+                className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                Xác nhận Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
