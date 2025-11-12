@@ -1,9 +1,19 @@
-import { io, Socket } from "socket.io-client";let socket: Socket | null = null;
+import { useAuthStore } from "@/store/auth-store";
+import { io, Socket } from "socket.io-client";
+let socket: Socket | null = null;
 
 export const getSocket = (token?: string): Socket => {
   // Chỉ tạo socket trên client
   if (typeof window === "undefined") {
     throw new Error("Socket can only be initialized on client side");
+  }
+
+  const { profile } = useAuthStore.getState();
+  const userId = profile?.userId;
+
+  if (!userId) {
+    console.warn("Socket: missing token or userId");
+    return socket as any; // hoặc null tùy cách bạn dùng
   }
 
   // Singleton pattern
@@ -16,7 +26,7 @@ export const getSocket = (token?: string): Socket => {
         },
         query: {
           // userId: getUserId(), // lấy từ decoded token
-          userId: "66bd2174-9e71-4cb6-9240-3caec5680e82",
+          userId: userId,
         },
         transports: ["websocket", "polling"],
         reconnection: true,
@@ -54,10 +64,10 @@ export const disconnectSocket = () => {
 };
 
 // Helper function
-const getUserId = (): string => {
+const getUserId = () => {
   if (typeof window === "undefined") return "";
 
-  const token = localStorage.getItem("accessToken");
+  const token = localStorage.getItem("auth-storage");
   if (!token) return "";
 
   try {

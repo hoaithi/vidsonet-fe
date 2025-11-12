@@ -1,6 +1,4 @@
-// components/video/channel-info-section.tsx
-'use client';
-
+"use client";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
@@ -28,6 +26,7 @@ export default function ChannelInfoSection({
 }: ChannelInfoSectionProps) {
   return (
     <div className="flex items-center justify-between border-b pb-4">
+      {/* Thông tin kênh */}
       <div className="flex items-center gap-3">
         <Link href={`/channel/${channel.id}`}>
           <div className="relative w-12 h-12 rounded-full overflow-hidden">
@@ -49,18 +48,31 @@ export default function ChannelInfoSection({
           </p>
         </div>
       </div>
-      {!isOwner && (
+
+      {/* Các nút bên phải */}
+      <div className="flex items-center gap-2">
         <Button
-          variant={isSubscribed ? "secondary" : "default"}
+          variant="outline"
           size="sm"
-          onClick={onToggleSubscribe}
           disabled={isLoading}
           className="flex items-center gap-1"
         >
-          {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {isSubscribed ? "Subscribed" : "Subscribe"}
+          Nhắn tin
         </Button>
-      )}
+
+        {!isOwner && (
+          <Button
+            variant={isSubscribed ? "secondary" : "default"}
+            size="sm"
+            onClick={onToggleSubscribe}
+            disabled={isLoading}
+            className="flex items-center gap-1"
+          >
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSubscribed ? "Subscribed" : "Subscribe"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
