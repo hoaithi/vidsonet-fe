@@ -1,11 +1,11 @@
-export interface Message {
-  id: string;
+export interface Message {  id: string;
   text: string;
   sender: "user" | "friend";
   timestamp: string;
   senderName?: string;
   avatar?: string;
   reaction?: string;
+  createdAt?: string; // ✅ Thêm để group theo ngày
 }
 
 export type MessageStatus = "sending" | "sent" | "delivered" | "read";
