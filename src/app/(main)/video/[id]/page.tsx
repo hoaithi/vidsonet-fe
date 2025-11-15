@@ -1,6 +1,4 @@
-"use client";
-
-import { useEffect, useState } from "react";
+"use client";import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -31,7 +29,8 @@ import { formatViewCount, getRelativeTime } from "@/lib/utils";
 import { VideoProgressUpdateRequest, Video } from "@/types/video";
 import { VideoService } from "@/services/video-service";
 import { VideoInfoActions } from "@/components/video/video-info-actions";
-import ChannelInfoSection from "@/components/video/channel-info-section";
+import { ChannelInfoSection } from "@/components/video/channel-info-section";
+import { chatService } from "@/services/chat-service";
 export default function VideoDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -61,6 +60,40 @@ export default function VideoDetailPage() {
   const [isOwner, setIsOwner] = useState(false);
   const [showPremiumDialog, setShowPremiumDialog] = useState(false);
   const [premiumChannelId, setPremiumChannelId] = useState<number>(0);
+
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+
+  // Thêm hàm để lấy hoặc tạo conversation
+  const getOrCreateConversation = async (channelOwnerId: string) => {
+    if (!isAuthenticated || !profile || !video) return null;
+
+    setIsLoadingConversation(true);
+    try {
+      // Gọi chatService để tạo hoặc lấy conversation
+      const conversation = await chatService.findOrCreateConversation(
+        profile.id.toString(), // Current user ID
+        channelOwnerId.toString(), // Channel owner ID
+        {
+          name: profile.fullName || "Unknown",
+          avatar: profile.avatarUrl,
+        },
+        {
+          name: video.profileName || "Unknown",
+          avatar: video.profileImage,
+        }
+      );
+
+      console.log("Created/Found conversation:", conversation);
+      return conversation.id;
+    } catch (error) {
+      console.error("Error getting conversation:", error);
+      toast.error("Không thể tạo cuộc hội thoại");
+      return null;
+    } finally {
+      setIsLoadingConversation(false);
+    }
+  };
 
   // Fetch video data
   useEffect(() => {
@@ -334,16 +367,31 @@ export default function VideoDetailPage() {
           onDeleteVideo={handleDeleteVideo}
         />
 
+        {/* SỬA PHẦN NÀY */}
         <ChannelInfoSection
           channel={{
-            id: video.profileId,
-            name: video.profileName,
-            avatarUrl: video.profileImage,
-            subscriberCount: subscriberCount,
+            id: video.profileId.toString(), // Dùng profileId từ video
+            name: video.profileName || "Unknown Channel", // Dùng profileName từ video
+            avatarUrl: video.profileImage, // Dùng profileImage từ video
+            subscriberCount: subscriberCount, // Dùng subscriberCount từ state
           }}
           isSubscribed={isSubscribed}
+          isLoading={isLoadingConversation}
           onToggleSubscribe={handleSubscriptionToggle}
           isOwner={isOwner}
+          // Props cho chat
+          currentUserId={profile?.id?.toString()} // Sửa từ userId thành id
+          currentUserName={profile?.fullName}
+          conversationId={conversationId || undefined}
+          onRequestConversation={async () => {
+            // Tạo conversation khi click nút chat
+            const convId = await getOrCreateConversation(video.profileId);
+            if (convId) {
+              setConversationId(convId);
+              return convId;
+            }
+            return null;
+          }}
         />
 
         {/* Description */}

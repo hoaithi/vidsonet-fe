@@ -12,15 +12,57 @@ import {
   CheckCheck,
   Clock,
   Image as ImageIcon,
+  Trash,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { chatService } from "@/services/chat-service";
 import { Conversation, ConversationList, Message } from "@/types/chat";
 import { useSocketContext } from "@/providers/SocketProvider";
-import { Trash } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 
-const CURRENT_USER_ID = "66bd2174-9e71-4cb6-9240-3caec5680e82";
+// ✅ Format date for separator
+function formatDateSeparator(dateString: string): string {
+  const date = new Date(dateString);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Reset time to compare only dates
+  today.setHours(0, 0, 0, 0);
+  yesterday.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+
+  if (date.getTime() === today.getTime()) {
+    return "Hôm nay";
+  } else if (date.getTime() === yesterday.getTime()) {
+    return "Hôm qua";
+  } else {
+    return date.toLocaleDateString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  }
+}
+
+// ✅ Check if should show date separator
+function shouldShowDateSeparator(
+  currentMsg: Message,
+  previousMsg: Message | undefined
+): boolean {
+  if (!previousMsg) return true;
+
+  const currentDate = new Date(
+    currentMsg.createdAt || currentMsg.timestamp
+  ).toDateString();
+  const previousDate = new Date(
+    previousMsg.createdAt || previousMsg.timestamp
+  ).toDateString();
+
+  return currentDate !== previousDate;
+}
 
 // ✅ Message Status Icon Component
 function MessageStatusIcon({
@@ -166,7 +208,7 @@ export default function ChatPage() {
 
   // ✅ Mark messages as seen when conversation is opened
   useEffect(() => {
-    if (activeConversation && socket && profile?.userId) {
+    if (activeConversation && socket && profile?.id) {
       const timer = setTimeout(() => {
         socket.emit("markAsSeen", {
           conversationId: activeConversation.id,
@@ -176,15 +218,14 @@ export default function ChatPage() {
 
       return () => clearTimeout(timer);
     }
-  }, [activeConversation, socket, profile?.userId]);
+  }, [activeConversation, socket, profile?.id]);
 
   // ✅ Socket listeners for message status updates
   useEffect(() => {
-    if (!socket || !profile?.userId) return;
+    if (!socket || !profile?.id) return;
 
     console.log("🎧 Listening for message status events...");
 
-    // 1. Message sent confirmation
     const handleMessageSent = (data: {
       tempId: string;
       message: any;
@@ -201,13 +242,13 @@ export default function ChatPage() {
                 status: "sent",
                 isSent: true,
                 tempId: undefined,
+                createdAt: data.message.createdAt,
               }
             : msg
         )
       );
     };
 
-    // 2. Message delivered
     const handleMessageDelivered = (data: {
       messageId: string;
       conversationId: string;
@@ -228,7 +269,6 @@ export default function ChatPage() {
       );
     };
 
-    // 3. Messages seen
     const handleMessagesSeen = (data: {
       conversationId: string;
       seenBy: string;
@@ -249,7 +289,6 @@ export default function ChatPage() {
       );
     };
 
-    // 4. Message error - ✅ FIX: Use callback to avoid stale closure
     const handleMessageError = (data: { tempId: string; error: string }) => {
       console.error("❌ Message error:", data);
 
@@ -262,7 +301,6 @@ export default function ChatPage() {
       });
     };
 
-    // 5. Incoming new message - ✅ FIX: Improved logic
     const handleNewMessage = (data: any) => {
       console.log("💬 New message received:", data);
       console.log("📝 Message data structure:", {
@@ -273,7 +311,6 @@ export default function ChatPage() {
         content: data.message?.content,
       });
 
-      // ✅ Validate data structure
       if (!data.message || !data.conversation) {
         console.error("❌ Invalid message data structure");
         return;
@@ -289,12 +326,12 @@ export default function ChatPage() {
             hour: "2-digit",
             minute: "2-digit",
           }),
+        createdAt: data.message.createdAt || new Date().toISOString(),
         senderName: data.message.senderName || data.conversation.name,
         avatar: data.conversation.avatar,
         status: undefined,
       };
 
-      // ✅ Check if message is for current active conversation
       const isActiveConversation =
         activeConversation && data.conversation.id === activeConversation.id;
 
@@ -304,10 +341,8 @@ export default function ChatPage() {
         dataConvId: data.conversation.id,
       });
 
-      // ✅ Add message if conversation is active
       if (isActiveConversation) {
         setListMessagesConversation((prev) => {
-          // Prevent duplicate messages
           if (prev.some((msg) => msg.id === newMessage.id)) {
             console.log("⚠️ Duplicate message prevented");
             return prev;
@@ -315,17 +350,14 @@ export default function ChatPage() {
           return [...prev, newMessage];
         });
 
-        // ✅ Auto-scroll to bottom
         setTimeout(() => scrollToBottom(), 100);
 
-        // ✅ Auto-mark as seen
         socket.emit("markAsSeen", {
           conversationId: activeConversation.id,
           userId: profile.userId,
         });
       }
 
-      // ✅ Update conversation list
       setListConversation((prev) => {
         const exists = prev.some((conv) => conv.id === data.conversation.id);
 
@@ -342,18 +374,16 @@ export default function ChatPage() {
                         hour: "2-digit",
                         minute: "2-digit",
                       }),
-                    unread: !isActiveConversation, // Only mark unread if not active
+                    unread: !isActiveConversation,
                   }
                 : conv
             )
             .sort((a, b) => {
-              // Move updated conversation to top
               if (a.id === data.conversation.id) return -1;
               if (b.id === data.conversation.id) return 1;
               return 0;
             });
         } else {
-          // Add new conversation
           const newConv: Conversation = {
             id: data.conversation.id,
             name: data.conversation.name,
@@ -387,27 +417,20 @@ export default function ChatPage() {
       socket.off("messageError", handleMessageError);
       socket.off("newMessage", handleNewMessage);
     };
-  }, [
-    socket,
-    activeConversation,
-    profile?.userId,
-    onlineUsers,
-    scrollToBottom,
-  ]);
+  }, [socket, activeConversation, profile?.id, onlineUsers, scrollToBottom]);
 
   useEffect(() => {
-    if (profile?.userId) {
+    if (profile?.id) {
       getListConversation();
     }
-  }, [profile?.userId]);
+  }, [profile?.id]);
 
   useEffect(() => {
-    if (activeConversation && profile?.userId) {
+    if (activeConversation && profile?.id) {
       getListMessageConversation(activeConversation.id);
     }
-  }, [activeConversation?.id, profile?.userId]);
+  }, [activeConversation?.id, profile?.id]);
 
-  // ✅ Auto-scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [listMessagesConversations, scrollToBottom]);
@@ -430,10 +453,10 @@ export default function ChatPage() {
   };
 
   const getListConversation = async () => {
-    console.log("profile?.userId", profile?.userId);
+    console.log("profile?.id", profile?.id);
 
     try {
-      const res = await chatService.getConversation(profile?.userId!);
+      const res = await chatService.getConversation(profile?.id!);
       console.log("✅ Conversations loaded:", res);
       if (res) {
         setListConversation(res);
@@ -444,16 +467,17 @@ export default function ChatPage() {
   };
 
   const getListMessageConversation = async (conversationId: string) => {
-    if (!profile?.userId) return;
+    if (!profile?.id) return;
     try {
       const res = await chatService.getMessagesConversation(
         conversationId,
-        profile.userId
+        profile.id
       );
       console.log("✅ Messages loaded:", res?.messages);
       if (res) {
         const messagesWithStatus = res.messages.map((msg: any) => ({
           ...msg,
+          createdAt: msg.createdAt || new Date().toISOString(),
           status:
             msg.sender === "user"
               ? msg.isRead
@@ -475,10 +499,7 @@ export default function ChatPage() {
   const handleDeleteConversation = async (activeConversation: Conversation) => {
     if (!activeConversation) return;
     try {
-      await chatService.deleteConversation(
-        activeConversation.id,
-        profile?.userId!
-      );
+      await chatService.deleteConversation(activeConversation.id, profile?.id!);
 
       setListConversation((prev) =>
         prev.filter((conv) => conv.id !== activeConversation.id)
@@ -500,12 +521,7 @@ export default function ChatPage() {
   );
 
   const handleSendMessage = async () => {
-    if (
-      !newMessage.trim() ||
-      !activeConversation ||
-      !socket ||
-      !profile?.userId
-    )
+    if (!newMessage.trim() || !activeConversation || !socket || !profile?.id)
       return;
 
     console.log("📤 Sending message:", newMessage);
@@ -513,7 +529,6 @@ export default function ChatPage() {
     const messageText = newMessage;
     setNewMessage("");
 
-    // Optimistic UI update
     const optimisticMessage: Message = {
       id: tempId,
       tempId,
@@ -523,24 +538,22 @@ export default function ChatPage() {
         hour: "2-digit",
         minute: "2-digit",
       }),
+      createdAt: new Date().toISOString(),
       status: "sending",
     };
 
     setListMessagesConversation((prev) => [...prev, optimisticMessage]);
 
-    // ✅ Auto-scroll after sending
     setTimeout(() => scrollToBottom(), 100);
 
-    // Send via WebSocket
     socket.emit("sendMessage", {
-      senderId: profile.userId,
+      senderId: profile.id,
       receiverId: activeConversation.receiverId,
       content: messageText,
       conversationId: activeConversation.id,
       tempId,
     });
 
-    // Update conversation list
     setListConversation((prev) =>
       prev.map((conv) =>
         conv.id === activeConversation.id
@@ -740,80 +753,106 @@ export default function ChatPage() {
                       listMessagesConversations[index - 1].sender !== "friend");
 
                   const messageStatus = getMessageStatus(message);
+                  const showDateSeparator = shouldShowDateSeparator(
+                    message,
+                    listMessagesConversations[index - 1]
+                  );
 
                   return (
-                    <div
-                      key={message.id || message.tempId}
-                      className={cn(
-                        "flex flex-col",
-                        message.sender === "user" ? "items-end" : "items-start"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "flex gap-2 max-w-[75%] sm:max-w-md",
-                          message.sender === "user"
-                            ? "flex-row-reverse"
-                            : "flex-row"
-                        )}
-                      >
-                        {message.sender === "friend" && (
-                          <div
-                            className={cn(
-                              "w-8 h-8 flex-shrink-0 self-end",
-                              showAvatar ? "visible" : "invisible"
-                            )}
-                          >
-                            {showAvatar && (
-                              <Avatar className="w-8 h-8 flex items-center justify-center overflow-hidden rounded-full">
-                                <AvatarImage
-                                  src={
-                                    message.avatar || activeConversation.avatar
-                                  }
-                                  alt={message.senderName}
-                                  className="w-full h-full object-cover"
-                                />
-                                <AvatarFallback className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs">
-                                  {message.senderName
-                                    ?.charAt(0)
-                                    .toUpperCase() ||
-                                    activeConversation.name
-                                      .charAt(0)
-                                      .toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
+                    <div key={message.id || message.tempId}>
+                      {/* ✅ Date Separator */}
+                      {showDateSeparator && (
+                        <div className="flex items-center justify-center my-4">
+                          <div className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full font-medium">
+                            {formatDateSeparator(
+                              message.createdAt || message.timestamp
                             )}
                           </div>
+                        </div>
+                      )}
+
+                      {/* Message */}
+                      <div
+                        className={cn(
+                          "flex flex-col",
+                          message.sender === "user"
+                            ? "items-end"
+                            : "items-start"
                         )}
+                      >
+                        <div
+                          className={cn(
+                            "flex gap-2 max-w-[75%] sm:max-w-md",
+                            message.sender === "user"
+                              ? "flex-row-reverse"
+                              : "flex-row"
+                          )}
+                        >
+                          {message.sender === "friend" && (
+                            <div
+                              className={cn(
+                                "w-8 h-8 flex-shrink-0 self-end",
+                                showAvatar ? "visible" : "invisible"
+                              )}
+                            >
+                              {showAvatar && (
+                                <Avatar className="w-8 h-8 flex items-center justify-center overflow-hidden rounded-full">
+                                  <AvatarImage
+                                    src={
+                                      message.avatar ||
+                                      activeConversation.avatar
+                                    }
+                                    alt={message.senderName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <AvatarFallback className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs">
+                                    {message.senderName
+                                      ?.charAt(0)
+                                      .toUpperCase() ||
+                                      activeConversation.name
+                                        .charAt(0)
+                                        .toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                            </div>
+                          )}
+
+                          {/* ✅ FIX: word-break */}
+                          <div
+                            className={cn(
+                              "px-3 py-2 rounded-[18px] shadow-sm",
+                              "break-words overflow-wrap-anywhere word-break-break-word",
+                              message.sender === "user"
+                                ? "bg-blue-600 text-white"
+                                : "bg-white text-gray-900 border border-gray-200"
+                            )}
+                            style={{
+                              wordBreak: "break-word",
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                              {message.text}
+                            </p>
+                          </div>
+                        </div>
 
                         <div
                           className={cn(
-                            "px-3 py-2 break-words overflow-wrap-anywhere",
+                            "mt-1 px-3 flex items-center gap-1.5",
                             message.sender === "user"
-                              ? "bg-blue-600 text-white rounded-[18px] shadow-sm"
-                              : "bg-white text-gray-900 rounded-[18px] shadow-sm border border-gray-200"
+                              ? "flex-row-reverse"
+                              : "ml-10"
                           )}
                         >
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {message.text}
-                          </p>
+                          <span className="text-[11px] text-gray-500">
+                            {message.timestamp}
+                          </span>
+                          {messageStatus && (
+                            <MessageStatusIcon status={messageStatus} />
+                          )}
                         </div>
-                      </div>
-
-                      <div
-                        className={cn(
-                          "mt-1 px-3 flex items-center gap-1.5",
-                          message.sender === "user"
-                            ? "flex-row-reverse"
-                            : "ml-10"
-                        )}
-                      >
-                        <span className="text-[11px] text-gray-500">
-                          {message.timestamp}
-                        </span>
-                        {messageStatus && (
-                          <MessageStatusIcon status={messageStatus} />
-                        )}
                       </div>
                     </div>
                   );
@@ -903,8 +942,7 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* ---------------------------------------------------------------- */}
-      {/* ✅ COMPONENT MÔ PHỎ DIALOG XÁC NHẬN XÓA (Bạn cần thay thế bằng component Dialog thực tế) */}
+      {/* ✅ Delete Confirmation Dialog */}
       {isDeleteDialogOpen && activeConversation && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
@@ -912,8 +950,9 @@ export default function ChatPage() {
               Xóa cuộc trò chuyện?
             </h3>
             <p className="text-gray-700 mb-4">
-              Bạn có chắc chắn muốn **xóa cuộc trò chuyện** với **
-              {activeConversation.name}**? Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa cuộc trò chuyện với{" "}
+              <strong>{activeConversation.name}</strong>? Hành động này không
+              thể hoàn tác.
             </p>
             <div className="flex justify-end gap-3">
               <button
