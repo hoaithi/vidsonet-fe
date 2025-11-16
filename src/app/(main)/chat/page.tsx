@@ -13,12 +13,82 @@ import {
   Clock,
   Image as ImageIcon,
   Trash,
+  PhoneMissed,
+  PhoneOff,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { chatService } from "@/services/chat-service";
-import { Conversation, ConversationList, Message } from "@/types/chat";
+import {
+  CallType,
+  Conversation,
+  ConversationList,
+  Message,
+} from "@/types/chat";
 import { useSocketContext } from "@/providers/SocketProvider";
 import { useAuthStore } from "@/store/auth-store";
+import VideoCallModal from "@/components/video-call/VideoCallModal";
+import IncomingCallNotification from "@/components/video-call/IncomingCallNotification";
+
+// ✅ CallMessage Component
+function CallMessage({ message }: { message: Message }) {
+  const isUser = message.sender === "user";
+  const metadata = message.metadata;
+
+  if (!metadata) return null;
+
+  // Icon based on call type and status
+  const getIcon = () => {
+    if (metadata.callStatus === "missed") {
+      return <PhoneMissed className="w-4 h-4" />;
+    }
+    if (
+      metadata.callStatus === "declined" ||
+      metadata.callStatus === "cancelled"
+    ) {
+      return <PhoneOff className="w-4 h-4" />;
+    }
+    return metadata.callType === CallType.VIDEO ? (
+      <Video className="w-4 h-4" />
+    ) : (
+      <Phone className="w-4 h-4" />
+    );
+  };
+
+  // Color based on status
+  const getColor = () => {
+    switch (metadata.callStatus) {
+      case "answered":
+        return "text-green-600 bg-green-50 border-green-200";
+      case "missed":
+        return "text-red-600 bg-red-50 border-red-200";
+      case "declined":
+      case "cancelled":
+        return "text-gray-600 bg-gray-50 border-gray-200";
+      default:
+        return "text-blue-600 bg-blue-50 border-blue-200";
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 px-3 py-2.5 rounded-xl border max-w-[220px]",
+        getColor()
+      )}
+    >
+      <div className="flex-shrink-0">{getIcon()}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{message.text}</p>
+        {metadata.duration > 0 && (
+          <p className="text-xs opacity-75 mt-0.5">
+            {Math.floor(metadata.duration / 60)}:
+            {(metadata.duration % 60).toString().padStart(2, "0")}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ✅ Format date for separator
 function formatDateSeparator(dateString: string): string {
@@ -120,6 +190,8 @@ function getMessageStatus(
 }
 
 export default function ChatPage() {
+  const { socket, isConnected, onlineUsers, currentUser } = useSocketContext();
+
   const [listConversations, setListConversation] = useState<ConversationList>(
     []
   );
@@ -136,7 +208,128 @@ export default function ChatPage() {
   const { profile } = useAuthStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const { socket, isConnected, onlineUsers, currentUser } = useSocketContext();
+  // Video call states
+  const [isCallOpen, setIsCallOpen] = useState(false);
+  const [isIncomingCall, setIsIncomingCall] = useState(false);
+  const [incomingCallData, setIncomingCallData] = useState<any>(null);
+  const [showIncomingNotification, setShowIncomingNotification] =
+    useState(false);
+
+  // Listen for incoming calls
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleIncomingCall = (data: {
+      callId: string;
+      fromUserId: string;
+      fromUserInfo: { name: string; avatar?: string };
+      offer: RTCSessionDescriptionInit;
+    }) => {
+      console.log("📞 Incoming call from:", data.fromUserInfo.name);
+
+      setIncomingCallData(data);
+      setIsIncomingCall(true);
+
+      // Show notification first
+      setShowIncomingNotification(true);
+
+      // Play ringtone
+      playRingtone();
+
+      // Request notification permission (browser)
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Cuộc gọi video đến", {
+          body: `${data.fromUserInfo.name} đang gọi cho bạn`,
+          icon: data.fromUserInfo.avatar || "/default-avatar.png",
+          tag: data.callId,
+        });
+      }
+    };
+
+    socket.on("incoming-call", handleIncomingCall);
+
+    return () => {
+      socket.off("incoming-call", handleIncomingCall);
+    };
+  }, [socket]);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Play ringtone (optional)
+  const playRingtone = () => {
+    // You can create an Audio instance here
+    // const audio = new Audio('/ringtone.mp3');
+    // audio.loop = true;
+    // audio.play();
+  };
+
+  // Accept call from notification
+  const handleAcceptFromNotification = () => {
+    setShowIncomingNotification(false);
+    setIsCallOpen(true);
+  };
+
+  // Reject call from notification
+  const handleRejectFromNotification = () => {
+    setShowIncomingNotification(false);
+
+    if (incomingCallData && socket) {
+      socket.emit("reject-call", {
+        callId: incomingCallData.callId,
+        toUserId: incomingCallData.fromUserId,
+      });
+    }
+
+    setIsIncomingCall(false);
+    setIncomingCallData(null);
+  };
+
+  // Start outgoing video call
+  const handleStartVideoCall = () => {
+    if (!activeConversation) return;
+
+    setIsIncomingCall(false);
+    setIncomingCallData(null);
+    setIsCallOpen(true);
+  };
+
+  // Close call modal
+  const handleCloseCall = () => {
+    setIsCallOpen(false);
+    setIsIncomingCall(false);
+    setIncomingCallData(null);
+    setShowIncomingNotification(false);
+  };
+
+  // Prepare friend data for call
+  const getFriendDataForCall = () => {
+    if (isIncomingCall && incomingCallData) {
+      return {
+        name: incomingCallData.fromUserInfo.name,
+        avatar: incomingCallData.fromUserInfo.avatar || "",
+        isOnline: true,
+        userId: incomingCallData.fromUserId,
+      };
+    }
+
+    if (activeConversation) {
+      return {
+        name: activeConversation.name,
+        avatar: activeConversation.avatar,
+        isOnline: activeConversation.isOnline,
+        userId: activeConversation.receiverId,
+      };
+    }
+
+    return null;
+  };
+
+  const friendData = getFriendDataForCall();
 
   // ✅ Scroll to bottom function
   const scrollToBottom = useCallback(() => {
@@ -307,8 +500,9 @@ export default function ChatPage() {
         conversationId: data.conversation?.id,
         messageId: data.message?.id,
         senderId: data.message?.senderId,
-        receiverId: data.message?.receiverId,
         content: data.message?.content,
+        messageType: data.message?.messageType,
+        metadata: data.message?.metadata,
       });
 
       if (!data.message || !data.conversation) {
@@ -316,10 +510,30 @@ export default function ChatPage() {
         return;
       }
 
+      // ✅ NORMALIZE IDs - Cực kỳ quan trọng!
+      const normalizeId = (id: string | undefined): string => {
+        if (!id) return "";
+        return id.trim().toLowerCase();
+      };
+
+      const currentUserId = normalizeId(profile?.id || profile?.userId || "");
+      const messageSenderId = normalizeId(data.message.senderId);
+
+      // ✅ So sánh sau khi normalize
+      const isMyMessage = messageSenderId === currentUserId;
+
+      console.log("🔍 Sender comparison (NORMALIZED):", {
+        messageSenderId,
+        currentUserId,
+        isMyMessage,
+        willShowAs: isMyMessage ? "user (RIGHT)" : "friend (LEFT)",
+      });
+
+      // ✅ Tạo message object
       const newMessage: Message = {
         id: data.message.id,
         text: data.message.content,
-        sender: "friend",
+        sender: isMyMessage ? "user" : "friend",
         timestamp:
           data.message.timestamp ||
           new Date().toLocaleTimeString("vi-VN", {
@@ -330,34 +544,50 @@ export default function ChatPage() {
         senderName: data.message.senderName || data.conversation.name,
         avatar: data.conversation.avatar,
         status: undefined,
+        messageType: data.message.messageType || "text",
+        metadata: data.message.metadata || undefined,
       };
+
+      console.log("✅ Created message object:", {
+        id: newMessage.id,
+        sender: newMessage.sender,
+        messageType: newMessage.messageType,
+        isCallMessage: newMessage.messageType === "call",
+      });
 
       const isActiveConversation =
         activeConversation && data.conversation.id === activeConversation.id;
 
-      console.log("🔍 Conversation check:", {
-        isActiveConversation,
-        activeConvId: activeConversation?.id,
-        dataConvId: data.conversation.id,
-      });
-
       if (isActiveConversation) {
         setListMessagesConversation((prev) => {
-          if (prev.some((msg) => msg.id === newMessage.id)) {
-            console.log("⚠️ Duplicate message prevented");
+          // ✅ Check duplicate với id hoặc tempId
+          const isDuplicate = prev.some(
+            (msg) =>
+              msg.id === newMessage.id ||
+              (msg.tempId && msg.tempId === newMessage.id)
+          );
+
+          if (isDuplicate) {
+            console.log("⚠️ Duplicate message prevented:", newMessage.id);
             return prev;
           }
+
+          console.log("➕ Adding message to conversation");
           return [...prev, newMessage];
         });
 
         setTimeout(() => scrollToBottom(), 100);
 
-        socket.emit("markAsSeen", {
-          conversationId: activeConversation.id,
-          userId: profile.userId,
-        });
+        // ✅ Chỉ mark as seen nếu KHÔNG phải tin nhắn của mình
+        if (!isMyMessage) {
+          socket.emit("markAsSeen", {
+            conversationId: activeConversation.id,
+            userId: profile?.id || profile?.userId,
+          });
+        }
       }
 
+      // ✅ Update conversation list
       setListConversation((prev) => {
         const exists = prev.some((conv) => conv.id === data.conversation.id);
 
@@ -374,16 +604,18 @@ export default function ChatPage() {
                         hour: "2-digit",
                         minute: "2-digit",
                       }),
-                    unread: !isActiveConversation,
+                    unread: !isActiveConversation && !isMyMessage, // ✅ Chỉ unread nếu không active VÀ không phải tin nhắn của mình
                   }
                 : conv
             )
             .sort((a, b) => {
+              // ✅ Đưa conversation mới nhất lên đầu
               if (a.id === data.conversation.id) return -1;
               if (b.id === data.conversation.id) return 1;
               return 0;
             });
         } else {
+          // ✅ Tạo conversation mới (trường hợp hiếm xảy ra)
           const newConv: Conversation = {
             id: data.conversation.id,
             name: data.conversation.name,
@@ -395,7 +627,7 @@ export default function ChatPage() {
                 hour: "2-digit",
                 minute: "2-digit",
               }),
-            unread: true,
+            unread: !isMyMessage,
             isOnline: onlineUsers.includes(data.conversation.receiverId || ""),
             receiverId: data.conversation.receiverId,
           };
@@ -427,6 +659,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (activeConversation && profile?.id) {
+      console.log("getListMessageConversation", activeConversation);
       getListMessageConversation(activeConversation.id);
     }
   }, [activeConversation?.id, profile?.id]);
@@ -587,392 +820,453 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="bg-white fixed inset-0 z-50 flex overflow-hidden">
-      {/* Left Sidebar - Conversations */}
-      <div className="w-[400px] bg-white border-r flex flex-col min-h-0">
-        <div className="p-2 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-2xl font-bold text-gray-900">Tin nhắn</h2>
+    <>
+      <div className="bg-white fixed inset-0 z-50 flex overflow-hidden">
+        {/* Left Sidebar - Conversations */}
+        <div className="w-[400px] bg-white border-r flex flex-col min-h-0">
+          <div className="p-2 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-bold text-gray-900">Tin nhắn</h2>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Tìm kiếm cuộc trò chuyện..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              />
+            </div>
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Tìm kiếm cuộc trò chuyện..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            />
+          <div className="flex-1 overflow-y-auto">
+            {filteredConversations.length === 0 ? (
+              <div className="p-4 text-center text-gray-600">
+                {searchQuery
+                  ? "Không tìm thấy cuộc trò chuyện nào"
+                  : "Chưa có tin nhắn"}
+              </div>
+            ) : (
+              <div className="space-y-1 p-2">
+                {filteredConversations.map((conversation) => (
+                  <div
+                    key={conversation.id}
+                    onClick={() => handleConversationClick(conversation)}
+                    className={cn(
+                      "p-3 rounded-lg cursor-pointer transition-all duration-200",
+                      activeConversation?.id === conversation.id
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <Avatar className="w-12 h-12 flex items-center justify-center overflow-hidden rounded-full">
+                          <AvatarImage
+                            src={conversation.avatar}
+                            alt={conversation.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <AvatarFallback className="w-full h-full flex items-center justify-center bg-blue-500 text-white font-semibold">
+                            {conversation.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {conversation.isOnline && (
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3
+                            className={cn(
+                              "font-semibold truncate",
+                              conversation.unread
+                                ? "text-gray-900"
+                                : "text-gray-700"
+                            )}
+                          >
+                            {conversation.name}
+                          </h3>
+                          <span className="text-xs text-gray-500 flex-shrink-0">
+                            {conversation.timestamp}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <p
+                            className={cn(
+                              "text-sm truncate",
+                              conversation.unread
+                                ? "text-gray-900 font-medium"
+                                : "text-gray-600"
+                            )}
+                          >
+                            {conversation.receiverId !== currentUser && "Bạn: "}
+                            {conversation.lastMessage}
+                          </p>
+                          {conversation.unread && (
+                            <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 ml-2"></div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {filteredConversations.length === 0 ? (
-            <div className="p-4 text-center text-gray-600">
-              {searchQuery
-                ? "Không tìm thấy cuộc trò chuyện nào"
-                : "Chưa có tin nhắn"}
-            </div>
-          ) : (
-            <div className="space-y-1 p-2">
-              {filteredConversations.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  onClick={() => handleConversationClick(conversation)}
-                  className={cn(
-                    "p-3 rounded-lg cursor-pointer transition-all duration-200",
-                    activeConversation?.id === conversation.id
-                      ? "bg-blue-50"
-                      : "hover:bg-gray-50"
-                  )}
-                >
+        {/* Right Side - Chat Area */}
+        <div className="flex-1 bg-gray-200 flex flex-col min-h-0 p-4">
+          {activeConversation ? (
+            <div className="flex flex-col flex-1 min-h-0 bg-white rounded-2xl p-3">
+              {/* Chat Header */}
+              <div className="p-2 border-b border-gray-200 bg-white flex-shrink-0">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <Avatar className="w-12 h-12 flex items-center justify-center overflow-hidden rounded-full">
+                      <Avatar className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-full">
                         <AvatarImage
-                          src={conversation.avatar}
-                          alt={conversation.name}
+                          src={activeConversation.avatar}
+                          alt={activeConversation.name}
                           className="w-full h-full object-cover"
                         />
                         <AvatarFallback className="w-full h-full flex items-center justify-center bg-blue-500 text-white font-semibold">
-                          {conversation.name.charAt(0).toUpperCase()}
+                          {activeConversation.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      {conversation.isOnline && (
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                      {activeConversation.isOnline && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3
-                          className={cn(
-                            "font-semibold truncate",
-                            conversation.unread
-                              ? "text-gray-900"
-                              : "text-gray-700"
-                          )}
-                        >
-                          {conversation.name}
-                        </h3>
-                        <span className="text-xs text-gray-500 flex-shrink-0">
-                          {conversation.timestamp}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <p
-                          className={cn(
-                            "text-sm truncate",
-                            conversation.unread
-                              ? "text-gray-900 font-medium"
-                              : "text-gray-600"
-                          )}
-                        >
-                          {conversation.receiverId !== currentUser && "Bạn: "}
-                          {conversation.lastMessage}
-                        </p>
-                        {conversation.unread && (
-                          <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 ml-2"></div>
-                        )}
-                      </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {activeConversation.name}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {activeConversation.isOnline
+                          ? "Đang hoạt động"
+                          : "Hoạt động gần đây"}
+                      </p>
                     </div>
                   </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center"
+                      onClick={() => setIsCallOpen(true)}
+                    >
+                      <Phone className="w-5 h-5" />
+                    </button>
+                    <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center">
+                      <Video className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                      className="text-red-600 hover:bg-red-50 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center"
+                      title="Xóa cuộc trò chuyện"
+                    >
+                      <Trash className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
+                {listMessagesConversations.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-500">Chưa có tin nhắn nào</p>
+                  </div>
+                ) : (
+                  listMessagesConversations.map((message, index) => {
+                    const showAvatar =
+                      message.sender === "friend" &&
+                      (index === 0 ||
+                        listMessagesConversations[index - 1].sender !==
+                          "friend");
+
+                    const messageStatus = getMessageStatus(message);
+                    const showDateSeparator = shouldShowDateSeparator(
+                      message,
+                      listMessagesConversations[index - 1]
+                    );
+
+                    return (
+                      <div key={message.id || message.tempId}>
+                        {/* ✅ Date Separator */}
+                        {showDateSeparator && (
+                          <div className="flex items-center justify-center my-4">
+                            <div className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full font-medium">
+                              {formatDateSeparator(
+                                message.createdAt || message.timestamp
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Message */}
+                        <div
+                          className={cn(
+                            "flex flex-col",
+                            message.sender === "user"
+                              ? "items-end"
+                              : "items-start"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "flex gap-2 max-w-[75%] sm:max-w-md",
+                              message.sender === "user"
+                                ? "flex-row-reverse"
+                                : "flex-row"
+                            )}
+                          >
+                            {message.sender === "friend" && (
+                              <div
+                                className={cn(
+                                  "w-8 h-8 flex-shrink-0 self-end",
+                                  showAvatar ? "visible" : "invisible"
+                                )}
+                              >
+                                {showAvatar && (
+                                  <Avatar className="w-8 h-8 flex items-center justify-center overflow-hidden rounded-full">
+                                    <AvatarImage
+                                      src={
+                                        message.avatar ||
+                                        activeConversation.avatar
+                                      }
+                                      alt={message.senderName}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <AvatarFallback className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs">
+                                      {message.senderName
+                                        ?.charAt(0)
+                                        .toUpperCase() ||
+                                        activeConversation.name
+                                          .charAt(0)
+                                          .toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                              </div>
+                            )}
+
+                            {/* ✅ FIX: word-break */}
+                            {/* <div
+                              className={cn(
+                                "px-3 py-2 rounded-[18px] shadow-sm",
+                                "break-words overflow-wrap-anywhere word-break-break-word",
+                                message.sender === "user"
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-white text-gray-900 border border-gray-200"
+                              )}
+                              style={{
+                                wordBreak: "break-word",
+                                overflowWrap: "anywhere",
+                              }}
+                            >
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                {message.text}
+                              </p>
+                            </div> */}
+
+                            {/* ✅ CONDITIONAL RENDER DỰA VÀO messageType */}
+                            {message.messageType === "call" ? (
+                              <CallMessage message={message} />
+                            ) : (
+                              <div
+                                className={cn(
+                                  "px-3 py-2 rounded-[18px] shadow-sm",
+                                  "break-words overflow-wrap-anywhere word-break-break-word",
+                                  message.sender === "user"
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-white text-gray-900 border border-gray-200"
+                                )}
+                                style={{
+                                  wordBreak: "break-word",
+                                  overflowWrap: "anywhere",
+                                }}
+                              >
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                  {message.text}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div
+                            className={cn(
+                              "mt-1 px-3 flex items-center gap-1.5",
+                              message.sender === "user"
+                                ? "flex-row-reverse"
+                                : "ml-10"
+                            )}
+                          >
+                            <span className="text-[11px] text-gray-500">
+                              {message.timestamp}
+                            </span>
+                            {messageStatus && (
+                              <MessageStatusIcon status={messageStatus} />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-2xl rounded-tl-md shadow-sm border border-gray-200">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        đang nhập...
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message Input */}
+              <div className="p-2 border-t border-gray-200 bg-white flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0 flex items-center justify-center">
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+
+                  <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0 flex items-center justify-center">
+                    <ImageIcon className="w-5 h-5" />
+                  </button>
+
+                  <div className="flex-1 relative">
+                    <Input
+                      placeholder="Nhập tin nhắn..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      className="bg-gray-100 border-0 text-gray-900 placeholder-gray-500 rounded-full pr-10 focus:ring-2 focus:ring-blue-500 transition-all duration-200 min-h-[40px]"
+                    />
+                    <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:bg-gray-200 w-7 h-7 rounded-full transition-all duration-200 flex items-center justify-center">
+                      <Smile className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={handleSendMessage}
+                    className="w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!newMessage.trim()}
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-2xl">
+              <div className="text-center space-y-4 px-6">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                  <Send className="w-12 h-12 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    Chào mừng đến với Tin nhắn
+                  </h3>
+                  <p className="text-gray-600 text-lg">
+                    Chọn một cuộc trò chuyện bên trái để bắt đầu nhắn tin
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>Đang hoạt động</span>
+                  </div>
+                  <span>•</span>
+                  <span>{listConversations.length} cuộc trò chuyện</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Right Side - Chat Area */}
-      <div className="flex-1 bg-gray-200 flex flex-col min-h-0 p-4">
-        {activeConversation ? (
-          <div className="flex flex-col flex-1 min-h-0 bg-white rounded-2xl p-3">
-            {/* Chat Header */}
-            <div className="p-2 border-b border-gray-200 bg-white flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <Avatar className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-full">
-                      <AvatarImage
-                        src={activeConversation.avatar}
-                        alt={activeConversation.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <AvatarFallback className="w-full h-full flex items-center justify-center bg-blue-500 text-white font-semibold">
-                        {activeConversation.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    {activeConversation.isOnline && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {activeConversation.name}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {activeConversation.isOnline
-                        ? "Đang hoạt động"
-                        : "Hoạt động gần đây"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center">
-                    <Phone className="w-5 h-5" />
-                  </button>
-                  <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center">
-                    <Video className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    className="text-red-600 hover:bg-red-50 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center"
-                    title="Xóa cuộc trò chuyện"
-                  >
-                    <Trash className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
-              {listMessagesConversations.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-500">Chưa có tin nhắn nào</p>
-                </div>
-              ) : (
-                listMessagesConversations.map((message, index) => {
-                  const showAvatar =
-                    message.sender === "friend" &&
-                    (index === 0 ||
-                      listMessagesConversations[index - 1].sender !== "friend");
-
-                  const messageStatus = getMessageStatus(message);
-                  const showDateSeparator = shouldShowDateSeparator(
-                    message,
-                    listMessagesConversations[index - 1]
-                  );
-
-                  return (
-                    <div key={message.id || message.tempId}>
-                      {/* ✅ Date Separator */}
-                      {showDateSeparator && (
-                        <div className="flex items-center justify-center my-4">
-                          <div className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full font-medium">
-                            {formatDateSeparator(
-                              message.createdAt || message.timestamp
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Message */}
-                      <div
-                        className={cn(
-                          "flex flex-col",
-                          message.sender === "user"
-                            ? "items-end"
-                            : "items-start"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "flex gap-2 max-w-[75%] sm:max-w-md",
-                            message.sender === "user"
-                              ? "flex-row-reverse"
-                              : "flex-row"
-                          )}
-                        >
-                          {message.sender === "friend" && (
-                            <div
-                              className={cn(
-                                "w-8 h-8 flex-shrink-0 self-end",
-                                showAvatar ? "visible" : "invisible"
-                              )}
-                            >
-                              {showAvatar && (
-                                <Avatar className="w-8 h-8 flex items-center justify-center overflow-hidden rounded-full">
-                                  <AvatarImage
-                                    src={
-                                      message.avatar ||
-                                      activeConversation.avatar
-                                    }
-                                    alt={message.senderName}
-                                    className="w-full h-full object-cover"
-                                  />
-                                  <AvatarFallback className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs">
-                                    {message.senderName
-                                      ?.charAt(0)
-                                      .toUpperCase() ||
-                                      activeConversation.name
-                                        .charAt(0)
-                                        .toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                              )}
-                            </div>
-                          )}
-
-                          {/* ✅ FIX: word-break */}
-                          <div
-                            className={cn(
-                              "px-3 py-2 rounded-[18px] shadow-sm",
-                              "break-words overflow-wrap-anywhere word-break-break-word",
-                              message.sender === "user"
-                                ? "bg-blue-600 text-white"
-                                : "bg-white text-gray-900 border border-gray-200"
-                            )}
-                            style={{
-                              wordBreak: "break-word",
-                              overflowWrap: "anywhere",
-                            }}
-                          >
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                              {message.text}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div
-                          className={cn(
-                            "mt-1 px-3 flex items-center gap-1.5",
-                            message.sender === "user"
-                              ? "flex-row-reverse"
-                              : "ml-10"
-                          )}
-                        >
-                          <span className="text-[11px] text-gray-500">
-                            {message.timestamp}
-                          </span>
-                          {messageStatus && (
-                            <MessageStatusIcon status={messageStatus} />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-
-              {isTyping && (
-                <div className="flex justify-start">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-2xl rounded-tl-md shadow-sm border border-gray-200">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                    </div>
-                    <span className="text-xs text-gray-500">đang nhập...</span>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Message Input */}
-            <div className="p-2 border-t border-gray-200 bg-white flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0 flex items-center justify-center">
-                  <Paperclip className="w-5 h-5" />
-                </button>
-
-                <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0 flex items-center justify-center">
-                  <ImageIcon className="w-5 h-5" />
-                </button>
-
-                <div className="flex-1 relative">
-                  <Input
-                    placeholder="Nhập tin nhắn..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    className="bg-gray-100 border-0 text-gray-900 placeholder-gray-500 rounded-full pr-10 focus:ring-2 focus:ring-blue-500 transition-all duration-200 min-h-[40px]"
-                  />
-                  <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:bg-gray-200 w-7 h-7 rounded-full transition-all duration-200 flex items-center justify-center">
-                    <Smile className="w-5 h-5" />
-                  </button>
-                </div>
-
+        {/* ✅ Delete Confirmation Dialog */}
+        {isDeleteDialogOpen && activeConversation && (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
+              <h3 className="text-lg font-bold text-red-600 mb-2">
+                Xóa cuộc trò chuyện?
+              </h3>
+              <p className="text-gray-700 mb-4">
+                Bạn có chắc chắn muốn xóa cuộc trò chuyện với{" "}
+                <strong>{activeConversation.name}</strong>? Hành động này không
+                thể hoàn tác.
+              </p>
+              <div className="flex justify-end gap-3">
                 <button
-                  onClick={handleSendMessage}
-                  className="w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!newMessage.trim()}
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
                 >
-                  <Send className="w-4 h-4" />
+                  Hủy
                 </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-2xl">
-            <div className="text-center space-y-4 px-6">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
-                <Send className="w-12 h-12 text-white" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  Chào mừng đến với Tin nhắn
-                </h3>
-                <p className="text-gray-600 text-lg">
-                  Chọn một cuộc trò chuyện bên trái để bắt đầu nhắn tin
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span>Đang hoạt động</span>
-                </div>
-                <span>•</span>
-                <span>{listConversations.length} cuộc trò chuyện</span>
+                <button
+                  onClick={() => {
+                    handleDeleteConversation(activeConversation);
+                  }}
+                  className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  Xác nhận Xóa
+                </button>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* ✅ Delete Confirmation Dialog */}
-      {isDeleteDialogOpen && activeConversation && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
-            <h3 className="text-lg font-bold text-red-600 mb-2">
-              Xóa cuộc trò chuyện?
-            </h3>
-            <p className="text-gray-700 mb-4">
-              Bạn có chắc chắn muốn xóa cuộc trò chuyện với{" "}
-              <strong>{activeConversation.name}</strong>? Hành động này không
-              thể hoàn tác.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsDeleteDialogOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={() => {
-                  handleDeleteConversation(activeConversation);
-                }}
-                className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-              >
-                Xác nhận Xóa
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Incoming Call Notification (shows before modal) */}
+      {showIncomingNotification && incomingCallData && (
+        <IncomingCallNotification
+          isOpen={showIncomingNotification}
+          callerInfo={{
+            name: incomingCallData.fromUserInfo.name,
+            avatar: incomingCallData.fromUserInfo.avatar,
+          }}
+          onAccept={handleAcceptFromNotification}
+          onReject={handleRejectFromNotification}
+        />
       )}
-    </div>
+
+      {/* Video Call Modal */}
+      {friendData && socket && profile && (
+        <VideoCallModal
+          isOpen={isCallOpen}
+          onClose={handleCloseCall}
+          friendData={friendData}
+          socket={socket}
+          currentUserId={profile.id}
+          currentUserInfo={{
+            name: profile.fullName || "You",
+            avatar: profile.avatarUrl,
+          }}
+          isIncoming={isIncomingCall}
+          incomingCallData={incomingCallData}
+        />
+      )}
+    </>
   );
 }
