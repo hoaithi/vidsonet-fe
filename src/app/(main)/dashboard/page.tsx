@@ -1,4 +1,5 @@
-"use client";import { useState, useMemo } from "react";
+"use client";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,21 +15,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   ArrowUp,
   ArrowDown,
   Eye,
   Heart,
   Users,
-  DollarSign,
+  MessageSquare,
   Play,
   MoreHorizontal,
+  Video,
+  ThumbsDown,
 } from "lucide-react";
 import {
   LineChart,
@@ -41,12 +37,18 @@ import {
   Bar,
   Tooltip,
 } from "recharts";
+import { DashboardService } from "@/services/dashboard-service";
+import {
+  ResultData,
+  ResultDataSubscription,
+  TopVideo,
+} from "@/types/dashboard";
+import { useAuthStore } from "@/store/auth-store";
 
-// Types
-type SortOption = "views" | "likes" | "date" | "duration";
+type SortOption = "views" | "likes" | "date" | "engagement";
 
 interface DashboardVideo {
-  id: number;
+  id: string;
   title: string;
   thumbnail: string;
   duration: string;
@@ -56,70 +58,10 @@ interface DashboardVideo {
   viewsNum: number;
   likesNum: number;
   dateNum: number;
-  durationNum: number;
+  engagementNum: number;
+  comments: number;
+  dislikes: number;
 }
-
-// Mock Data
-const mockVideos: DashboardVideo[] = [
-  {
-    id: 1,
-    title: "Getting Started with React Hooks",
-    thumbnail:
-      "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=225&fit=crop",
-    duration: "12:45",
-    uploadDate: "2 days ago",
-    views: "15.2K",
-    likes: "1.2K",
-    viewsNum: 15200,
-    likesNum: 1200,
-    dateNum: 2,
-    durationNum: 765,
-  },
-  {
-    id: 2,
-    title: "Advanced TypeScript Patterns",
-    thumbnail:
-      "https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=400&h=225&fit=crop",
-    duration: "18:30",
-    uploadDate: "5 days ago",
-    views: "23.5K",
-    likes: "2.1K",
-    viewsNum: 23500,
-    likesNum: 2100,
-    dateNum: 5,
-    durationNum: 1110,
-  },
-  {
-    id: 3,
-    title: "Building a Full-Stack App",
-    thumbnail:
-      "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=225&fit=crop",
-    duration: "25:15",
-    uploadDate: "1 week ago",
-    views: "31.8K",
-    likes: "3.4K",
-    viewsNum: 31800,
-    likesNum: 3400,
-    dateNum: 7,
-    durationNum: 1515,
-  },
-];
-
-const viewsData = [
-  { date: "Jan", views: 12000 },
-  { date: "Feb", views: 19000 },
-  { date: "Mar", views: 15000 },
-  { date: "Apr", views: 25000 },
-  { date: "May", views: 22000 },
-  { date: "Jun", views: 30000 },
-];
-
-const engagementData = [
-  { metric: "Likes", value: 8500 },
-  { metric: "Comments", value: 3200 },
-  { metric: "Shares", value: 1800 },
-  { metric: "Saves", value: 2400 },
-];
 
 // Header Component
 function DashboardHeader({ onViewAnalytics }: { onViewAnalytics: () => void }) {
@@ -133,22 +75,22 @@ function DashboardHeader({ onViewAnalytics }: { onViewAnalytics: () => void }) {
           Track your channel's performance and growth
         </p>
       </div>
-      <Button
-        onClick={onViewAnalytics}
-        className="bg-blue-600 hover:bg-blue-700 text-white border-0"
-      >
-        View Analytics
-      </Button>
     </div>
   );
 }
 
 // Overview Stats Cards Component
-function OverviewStatsCards() {
+function OverviewStatsCards({
+  stats,
+  subscriberCount,
+}: {
+  stats: ResultData["stats"] | null;
+  subscriberCount: number;
+}) {
   const statsData = [
     {
       title: "Total Views",
-      value: "1.2M",
+      value: stats ? stats.totalViews.toLocaleString() : "0",
       change: "+12.5%",
       changeType: "increase",
       icon: Eye,
@@ -156,7 +98,7 @@ function OverviewStatsCards() {
     },
     {
       title: "Subscribers",
-      value: "45.2K",
+      value: subscriberCount.toLocaleString(),
       change: "+8.3%",
       changeType: "increase",
       icon: Users,
@@ -164,18 +106,18 @@ function OverviewStatsCards() {
     },
     {
       title: "Total Likes",
-      value: "89.5K",
+      value: stats ? stats.totalLikes.toLocaleString() : "0",
       change: "+15.2%",
       changeType: "increase",
       icon: Heart,
       gradient: "from-blue-500 to-blue-600",
     },
     {
-      title: "Revenue",
-      value: "$12,450",
-      change: "+22.1%",
+      title: "Total Videos",
+      value: stats ? stats.videoCount.toString() : "0",
+      change: "+5.0%",
       changeType: "increase",
-      icon: DollarSign,
+      icon: Video,
       gradient: "from-blue-600 to-blue-700",
     },
   ];
@@ -224,7 +166,26 @@ function OverviewStatsCards() {
 }
 
 // Dashboard Charts Component
-function DashboardCharts() {
+function DashboardCharts({ stats }: { stats: ResultData["stats"] | null }) {
+  const engagementData = stats
+    ? [
+        { metric: "Likes", value: stats.totalLikes },
+        { metric: "Dislikes", value: stats.totalDislikes },
+        { metric: "Comments", value: stats.totalComments },
+        { metric: "Views", value: Math.floor(stats.totalViews / 100) }, // Scale down for better visualization
+      ]
+    : [];
+
+  // Mock monthly data - you can replace this with real data from your API
+  const viewsData = [
+    { date: "Jan", views: 0 },
+    { date: "Feb", views: 0 },
+    { date: "Mar", views: 0 },
+    { date: "Apr", views: 0 },
+    { date: "May", views: 0 },
+    { date: "Jun", views: stats?.totalViews || 0 },
+  ];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card className="bg-white border-gray-200 shadow-sm">
@@ -288,24 +249,82 @@ function DashboardCharts() {
   );
 }
 
+// Format duration from seconds to MM:SS
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+// Format date
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "1 day ago";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return `${Math.floor(diffDays / 365)} years ago`;
+}
+
+// Format number to K/M format
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + "M";
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + "K";
+  }
+  return num.toString();
+}
+
 // Videos Table Component
 function VideosTable({
   videos,
   sortBy,
   onSortChange,
   onVideoAction,
+  loading,
 }: {
   videos: DashboardVideo[];
   sortBy: SortOption;
   onSortChange: (sort: string) => void;
-  onVideoAction: (action: string, videoId: number) => void;
+  onVideoAction: (action: string, videoId: string) => void;
+  loading: boolean;
 }) {
-  const sortOptions = [
-    { value: "views", label: "Most Views" },
-    { value: "likes", label: "Most Likes" },
-    { value: "date", label: "Newest First" },
-    { value: "duration", label: "Longest First" },
-  ];
+  if (loading) {
+    return (
+      <Card className="bg-white border-gray-200 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-gray-900">Your Videos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">Loading videos...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (videos.length === 0) {
+    return (
+      <Card className="bg-white border-gray-200 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-gray-900">Your Videos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">No videos found</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-white border-gray-200 shadow-sm">
@@ -317,22 +336,6 @@ function VideosTable({
               Manage and track your video performance
             </CardDescription>
           </div>
-          <Select value={sortBy} onValueChange={onSortChange}>
-            <SelectTrigger className="w-48 bg-gray-100 border-gray-200 text-gray-900">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-white border-gray-200 text-gray-900 z-50">
-              {sortOptions.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  className="text-gray-900 hover:bg-gray-100 focus:bg-gray-100"
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
       </CardHeader>
       <CardContent>
@@ -357,20 +360,28 @@ function VideosTable({
               </div>
 
               <div className="flex-1 min-w-0">
-                <h3 className="text-gray-900 font-medium group-hover:text-blue-600 transition-colors">
+                <h3 className="text-gray-900 font-medium group-hover:text-blue-600 transition-colors truncate">
                   {video.title}
                 </h3>
                 <p className="text-gray-500 text-sm">{video.uploadDate}</p>
               </div>
 
-              <div className="flex items-center space-x-6 text-sm text-gray-600">
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
                 <div className="flex items-center space-x-1">
                   <Eye className="w-4 h-4" />
                   <span>{video.views}</span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <Heart className="w-4 h-4" />
+                  <Heart className="w-4 h-4 text-red-500" />
                   <span>{video.likes}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <ThumbsDown className="w-4 h-4 text-gray-400" />
+                  <span>{video.dislikes}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <MessageSquare className="w-4 h-4 text-blue-500" />
+                  <span>{video.comments}</span>
                 </div>
               </div>
 
@@ -426,48 +437,132 @@ function VideosTable({
 // Main Dashboard Page Component
 export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<SortOption>("views");
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<ResultData | undefined>(
+    undefined
+  );
+  const [subscriptionData, setSubscriptionData] = useState<
+    ResultDataSubscription | undefined
+  >(undefined);
+
+  const { profile } = useAuthStore();
+
+  // Replace with actual profileId from auth context or props
+  const profileId = profile?.id;
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        if (!profileId) return;
+        setLoading(true);
+
+        // Fetch both dashboard stats and subscription data
+        const [dashboardResponse, subscriptionResponse] = await Promise.all([
+          DashboardService.getDashboardByProfileId(profileId),
+          DashboardService.getDashboarSubscribersById(profileId),
+        ]);
+
+        setDashboardData(dashboardResponse.result);
+        setSubscriptionData(subscriptionResponse.result);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        // You can add error handling UI here
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [profileId]);
+
+  // Transform API data to dashboard video format
+  const videos: DashboardVideo[] = useMemo(() => {
+    if (!dashboardData?.topVideos) return [];
+
+    return dashboardData.topVideos.map((video: TopVideo) => ({
+      id: video.id,
+      title: video.title,
+      thumbnail: video.thumbnailUrl,
+      duration: formatDuration(video.duration),
+      uploadDate: formatDate(video.publishedAt),
+      views: formatNumber(video.viewCount),
+      likes: formatNumber(video.likeCount),
+      viewsNum: video.viewCount,
+      likesNum: video.likeCount,
+      dateNum: new Date(video.publishedAt).getTime(),
+      engagementNum: video.engagementScore,
+      comments: video.commentCount,
+      dislikes: video.dislikeCount,
+    }));
+  }, [dashboardData]);
 
   const sortedVideos = useMemo(() => {
-    const sorted = [...mockVideos];
+    const sorted = [...videos];
     switch (sortBy) {
       case "views":
         return sorted.sort((a, b) => b.viewsNum - a.viewsNum);
       case "likes":
         return sorted.sort((a, b) => b.likesNum - a.likesNum);
       case "date":
-        return sorted.sort((a, b) => a.dateNum - b.dateNum);
-      case "duration":
-        return sorted.sort((a, b) => b.durationNum - a.durationNum);
+        return sorted.sort((a, b) => b.dateNum - a.dateNum);
+      case "engagement":
+        return sorted.sort((a, b) => b.engagementNum - a.engagementNum);
       default:
         return sorted;
     }
-  }, [sortBy]);
+  }, [videos, sortBy]);
 
   const handleSortChange = (value: string) => {
     setSortBy(value as SortOption);
   };
 
-  const handleVideoAction = (action: string, videoId: number) => {
+  const handleVideoAction = (action: string, videoId: string) => {
     console.log(`Action: ${action}, Video ID: ${videoId}`);
-    alert(`${action} video ${videoId}`);
+    // Implement actual actions here
+    switch (action) {
+      case "watch":
+        window.open(`/watch/${videoId}`, "_blank");
+        break;
+      case "edit":
+        // Navigate to edit page
+        break;
+      case "analytics":
+        // Navigate to analytics page
+        break;
+      case "delete":
+        // Show confirmation dialog and delete
+        break;
+    }
   };
 
   const handleViewAnalytics = () => {
     console.log("View Analytics clicked");
-    alert("Opening analytics page...");
+    // Navigate to analytics page
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500 text-lg">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen text-gray-900 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         <DashboardHeader onViewAnalytics={handleViewAnalytics} />
-        <OverviewStatsCards />
-        <DashboardCharts />
+        <OverviewStatsCards
+          stats={dashboardData?.stats || null}
+          subscriberCount={subscriptionData?.subscriberCount || 0}
+        />
+        <DashboardCharts stats={dashboardData?.stats || null} />
         <VideosTable
           videos={sortedVideos}
           sortBy={sortBy}
           onSortChange={handleSortChange}
           onVideoAction={handleVideoAction}
+          loading={loading}
         />
       </div>
     </div>
