@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X, Trash2 } from 'lucide-react';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -74,6 +75,9 @@ export function PostForm({ open, onOpenChange, post, onSuccess }: PostFormProps)
   const { createPost, updatePost } = usePosts();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!post;
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize form
   const form = useForm<z.infer<typeof postSchema>>({
@@ -93,14 +97,27 @@ export function PostForm({ open, onOpenChange, post, onSuccess }: PostFormProps)
         content: post.content,
         imageFile: undefined,
       });
+      // Set preview to existing image when editing
+      setImagePreview(post.imageUrl || null);
     } else {
       form.reset({
         title: '',
         content: '',
         imageFile: undefined,
       });
+      setImagePreview(null);
     }
   }, [post, form]);
+
+  // Cleanup object URLs on unmount or when changing files
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
+  }, []);
 
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof postSchema>) => {
@@ -221,11 +238,67 @@ export function PostForm({ open, onOpenChange, post, onSuccess }: PostFormProps)
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Image (optional)</FormLabel>
+                  {/* Preview */}
+                  {imagePreview ? (
+                    <div className="relative w-full overflow-hidden rounded-md bg-muted aspect-[4/3] sm:aspect-video mb-3">
+                      <Image
+                        src={imagePreview}
+                        alt={post?.title || 'Post image preview'}
+                        fill
+                        sizes="100vw"
+                        className="object-cover"
+                        priority={false}
+                      />
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isSubmitting}
+                        >
+                          <ImageIcon className="h-4 w-4 mr-1" /> Change
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            field.onChange(undefined);
+                            setImagePreview(null);
+                            if (objectUrlRef.current) {
+                              URL.revokeObjectURL(objectUrlRef.current);
+                              objectUrlRef.current = null;
+                            }
+                          }}
+                          disabled={isSubmitting}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" /> Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <FormControl>
                     <input
+                      ref={fileInputRef}
                       type="file"
                       accept={ACCEPTED_IMAGE_TYPES.join(',')}
-                      onChange={(e) => field.onChange(e.target.files?.[0])}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        field.onChange(f);
+                        if (f) {
+                          // Revoke previous object URL if any
+                          if (objectUrlRef.current) {
+                            URL.revokeObjectURL(objectUrlRef.current);
+                          }
+                          const url = URL.createObjectURL(f);
+                          objectUrlRef.current = url;
+                          setImagePreview(url);
+                        } else {
+                          setImagePreview(null);
+                        }
+                      }}
                       disabled={isSubmitting}
                     />
                   </FormControl>

@@ -28,27 +28,4 @@ export interface PostUpdateRequest {
   imageFile?: File | null;
 }
 
-export interface PostComment {
-  id: number;
-  content: string;
-  createdAt: string;
-  updatedAt?: string;
-  likeCount: number;
-  dislikeCount: number;
-  isHearted: boolean;
-  heartedAt?: string;
-  user: Profile;
-  postId: number;
-  parentId?: number;
-  replies?: PostComment[];
-}
-
-export interface PostCommentCreateRequest {
-  content: string;
-  postId: number;
-  parentId?: number;
-}
-
-export interface PostCommentUpdateRequest {
-  content: string;
-}
+// Post comments now use the unified Comment type from types/video via CommentService and the use-comments hook.

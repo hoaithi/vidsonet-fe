@@ -49,7 +49,7 @@ export default function PaymentSuccessPage() {
                 // Get channel ID from tier if payment was successful
                 if (result && tierId) {
                     try {
-                        const tierResponse = await MembershipService.getMembershipTierById(parseInt(tierId));
+                        const tierResponse = await MembershipService.getMembershipTierById(tierId);
                         if (tierResponse.result) {
                             setChannelId(tierResponse.result.channelId);
                             setChannelName(tierResponse.result.channelName);

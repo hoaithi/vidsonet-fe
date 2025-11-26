@@ -13,7 +13,7 @@ import {
 interface PremiumContentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  channelId: number;
+  channelId: string;
   onViewMembership: () => void;
   onGoBack: () => void;
 }

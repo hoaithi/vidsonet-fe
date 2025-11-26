@@ -18,10 +18,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { useAuthStore } from '@/store/auth-store';
-import { useComments as useVideoComments } from '@/lib/hooks/use-comments';
-import { usePostComments } from '@/lib/hooks/use-posts';
-import { Comment as VideoComment } from '@/types/video';
-import { PostComment } from '@/types/post';
+import { useComments } from '@/lib/hooks/use-comments';
+import { Comment as GenericComment } from '@/types/video';
 import { commentSchema } from '@/lib/validation';
 import { getRelativeTime } from '@/lib/utils';
 
@@ -36,20 +34,15 @@ interface CommentListProps {
 export default function CommentList({ targetId, commentType, isOwner = false }: CommentListProps) {
   const { isAuthenticated, profile } = useAuthStore();
 
-  // Hooks for each content type
-  const videoHook = useVideoComments(commentType === 'VIDEO' ? targetId : undefined);
-  const postHook = usePostComments(commentType === 'POST' ? (Number(targetId) || undefined) : undefined);
+  // Single comments hook for both types
+  const commentHook = useComments(targetId, commentType);
 
   const [replyingTo, setReplyingTo] = useState<string | number | null>(null);
   const [editingComment, setEditingComment] = useState<string | number | null>(null);
 
   // Load comments on mount/when id changes
   useEffect(() => {
-    if (commentType === 'VIDEO') {
-      videoHook.getVideoComments(targetId);
-    } else {
-      postHook.getPostComments(Number(targetId));
-    }
+    commentHook.getItemComments(targetId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetId, commentType]);
 
@@ -70,11 +63,11 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
     resolver: zodResolver(commentSchema),
   });
 
-  const isLoading = commentType === 'VIDEO' ? videoHook.isLoading : postHook.isLoading;
+  const isLoading = commentHook.isLoading;
 
   const comments = useMemo(() => {
-    return (commentType === 'VIDEO' ? (videoHook.comments as VideoComment[]) : (postHook.comments as PostComment[])) || [];
-  }, [commentType, videoHook.comments, postHook.comments]);
+    return (commentHook.comments as GenericComment[]) || [];
+  }, [commentHook.comments]);
 
   const getCommentCountText = () => {
     const count = comments.length;
@@ -86,22 +79,14 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
   const onCommentSubmit = async (values: z.infer<typeof commentSchema>) => {
     if (!isAuthenticated) return;
 
-    if (commentType === 'VIDEO') {
-      await videoHook.addComment({ content: values.content, itemId: targetId, commentType: 'VIDEO' });
-    } else {
-      await postHook.createComment({ content: values.content, postId: Number(targetId) });
-    }
+    await commentHook.addComment({ content: values.content, itemId: targetId, commentType });
     commentForm.reset();
   };
 
   const onReplySubmit = async (values: z.infer<typeof commentSchema>) => {
     if (!isAuthenticated || replyingTo === null) return;
 
-    if (commentType === 'VIDEO') {
-      await videoHook.replyToComment(String(replyingTo), values.content);
-    } else {
-      await postHook.createComment({ content: values.content, postId: Number(targetId), parentId: Number(replyingTo) });
-    }
+    await commentHook.replyToComment(String(replyingTo), values.content);
     replyForm.reset();
     setReplyingTo(null);
   };
@@ -109,11 +94,7 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
   const onEditSubmit = async (values: z.infer<typeof commentSchema>) => {
     if (!isAuthenticated || editingComment === null) return;
 
-    if (commentType === 'VIDEO') {
-      await videoHook.updateComment(String(editingComment), { content: values.content });
-    } else {
-      await postHook.updateComment(Number(editingComment), { content: values.content });
-    }
+    await commentHook.updateComment(String(editingComment), { content: values.content });
     editForm.reset();
     setEditingComment(null);
   };
@@ -128,24 +109,20 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
   const toggleHeart = async (commentId: string | number, currentHearted: boolean) => {
     if (!isAuthenticated) return;
 
-    if (commentType === 'VIDEO') {
-      // video owner can heart; backend toggles
-      await videoHook.heartComment(String(commentId));
+    // owner can heart; backend toggles
+    if (currentHearted) {
+      await commentHook.unheartComment(String(commentId));
     } else {
-      if (currentHearted) {
-        await postHook.unheartComment(Number(commentId));
-      } else {
-        await postHook.heartComment(Number(commentId));
-      }
+      await commentHook.heartComment(String(commentId));
     }
   };
 
   const togglePin = async (commentId: string | number, currentPinned: boolean) => {
     if (!isAuthenticated || commentType !== 'VIDEO' || !isOwner) return;
     if (currentPinned) {
-      await videoHook.unpinComment(String(commentId));
+      await commentHook.unpinComment(String(commentId));
     } else {
-      await videoHook.pinComment(String(commentId));
+      await commentHook.pinComment(String(commentId));
     }
   };
 
@@ -154,17 +131,13 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
     const confirmed = window.confirm('Are you sure you want to delete this comment?');
     if (!confirmed) return;
 
-    if (commentType === 'VIDEO') {
-      await videoHook.deleteComment(String(commentId));
-    } else {
-      await postHook.deleteComment(Number(commentId));
-    }
+    await commentHook.deleteComment(String(commentId));
   };
 
-  const renderComment = (comment: VideoComment | PostComment, isReply: boolean = false) => {
-  const ownerName = commentType === 'VIDEO' ? (comment as VideoComment).owner.fullName : (comment as PostComment).user.fullName;
-  const ownerAvatar = commentType === 'VIDEO' ? (comment as VideoComment).owner.avatarUrl : (comment as PostComment).user.avatarUrl;
-    const ownerId = commentType === 'VIDEO' ? (comment as VideoComment).owner.id : (comment as PostComment).user.id;
+  const renderComment = (comment: GenericComment, isReply: boolean = false) => {
+    const ownerName = (comment as GenericComment).owner.fullName;
+    const ownerAvatar = (comment as GenericComment).owner.avatarUrl;
+    const ownerId = (comment as GenericComment).owner.id;
 
     const isOwnerOfComment = profile?.id === ownerId;
 
@@ -174,8 +147,8 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
     const canHeart = isAuthenticated && (!isReply) && (commentType === 'VIDEO' ? isOwner : isOwner); // post: only owner hearts, keep same rule
     const canPin = isAuthenticated && !isReply && commentType === 'VIDEO' && isOwner;
 
-    const hearted = commentType === 'VIDEO' ? (comment as VideoComment).hearted : (comment as PostComment).isHearted;
-    const pinned = commentType === 'VIDEO' ? (comment as VideoComment).isPinned : false;
+  const hearted = (comment as GenericComment).hearted as boolean;
+  const pinned = commentType === 'VIDEO' ? (comment as GenericComment).isPinned : false;
 
     return (
       <div key={String(comment.id)} className={`flex gap-3 ${pinned ? 'bg-muted/50 p-3 rounded-lg' : ''} ${isReply ? 'mt-3 ml-10' : 'mt-6'}`}>
@@ -187,7 +160,7 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm">{ownerName}</span>
-            <span className="text-xs text-muted-foreground">{getRelativeTime(comment.createdAt as unknown as string)}</span>
+            <span className="text-xs text-muted-foreground">{getRelativeTime((comment as any).createdAt as string)}</span>
             {pinned && (
               <span className="text-xs text-primary inline-flex items-center gap-1"><Pin className="h-3 w-3" />Pinned</span>
             )}
@@ -325,10 +298,10 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
             {/* For VIDEO: pinned first */}
             {commentType === 'VIDEO'
               ? [
-                  ...(comments as VideoComment[]).filter((c) => c.isPinned).map((c) => renderComment(c)),
-                  ...(comments as VideoComment[]).filter((c) => !c.isPinned).map((c) => renderComment(c)),
+                  ...(comments as GenericComment[]).filter((c) => c.isPinned).map((c) => renderComment(c)),
+                  ...(comments as GenericComment[]).filter((c) => !c.isPinned).map((c) => renderComment(c)),
                 ]
-              : (comments as PostComment[]).map((c) => renderComment(c))}
+              : (comments as GenericComment[]).map((c) => renderComment(c))}
           </>
         ) : (
           <div className="text-center py-8 text-muted-foreground">No comments yet. Be the first to comment!</div>

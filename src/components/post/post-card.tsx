@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ThumbsUp, ThumbsDown, MessageSquare, MoreHorizontal, Heart, Edit, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,7 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
               <AvatarImage 
                 src={post.profileImage || ''} 
                 alt={post.profileName} 
+                referrerPolicy="no-referrer"
               />
               <AvatarFallback>
                 {(post.profileName|| 'U').charAt(0).toUpperCase()}
@@ -129,11 +131,14 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
       <CardContent className="pt-0">
         <div className="space-y-3">
           {post.imageUrl && (
-            <div className="w-full overflow-hidden rounded-md">
-              <img
+            <div className="relative w-full overflow-hidden rounded-md bg-muted aspect-[4/3] sm:aspect-video">
+              <Image
                 src={post.imageUrl}
                 alt={post.title}
-                className="w-full h-auto object-cover"
+                fill
+                sizes="100vw"
+                className="object-cover"
+                priority={false}
               />
             </div>
           )}
@@ -147,7 +152,7 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
             {post.content.length > 300 ? (
               <>
                 {post.content.substring(0, 300)}...
-                <Link href={`/post/${post.id}`} className="text-primary hover:underline ml-1">
+                <Link href={`/posts/${post.id}`} className="text-primary hover:underline ml-1">
                   Read more
                 </Link>
               </>
@@ -178,7 +183,7 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
               {post.dislikeCount > 0 && <span className="text-xs">{post.dislikeCount}</span>}
             </Button>
             
-            <Link href={`/post/${post.id}#comments`}>
+            <Link href={`/posts/${post.id}#comments`}>
               <Button
                 variant="ghost"
                 size="sm"

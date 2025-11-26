@@ -19,7 +19,7 @@ export const useVideos = () => {
     setIsLoading(true);
 
     try {
-      const response = await VideoService.searchVideos(page, size, sortBy, sortDir);
+      const response = await VideoService.searchVideos({}, page, size, sortBy, sortDir);
       setSearchResults(response.result);
       return response.result;
     } catch (error: any) {

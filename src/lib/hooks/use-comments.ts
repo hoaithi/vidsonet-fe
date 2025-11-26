@@ -1,19 +1,18 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import {VideoService} from '@/services/video-service';
 import CommentService from '@/services/comment-service';
 import { CommentCreateRequest, CommentUpdateRequest } from '@/types/video';
 
-export const useComments = (videoId?: string) => {
+export const useComments = (itemId?: string, commentType: 'VIDEO' | 'POST' = 'VIDEO') => {
   const [isLoading, setIsLoading] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
 
-  // Get video comments
-  const getVideoComments = async (id: string = videoId || '') => {
+  // Get item comments
+  const getItemComments = async (id: string = itemId || '') => {
     setIsLoading(true);
     
     try {
-      const response = await VideoService.getVideoComments(id);
+      const response = await CommentService.getItemComments(id, commentType);
       
       if (response.result) {
         setComments(response.result);
@@ -21,7 +20,7 @@ export const useComments = (videoId?: string) => {
       
       return response.result;
     } catch (error: any) {
-      console.error('Get video comments error:', error);
+      console.error('Get comments error:', error);
       
       toast.error(
         error.response?.data?.message || 
@@ -33,12 +32,12 @@ export const useComments = (videoId?: string) => {
     }
   };
 
-  // Add comment to video
+  // Add comment to item
   const addComment = async (data: CommentCreateRequest) => {
     setIsLoading(true);
     
     try {
-      const response = await VideoService.addComment(data.itemId, data);
+      const response = await CommentService.addComment(data.itemId, data);
       
       if (response.result) {
         // Update comments list
@@ -346,7 +345,7 @@ export const useComments = (videoId?: string) => {
   return {
     isLoading,
     comments,
-    getVideoComments,
+    getItemComments,
     addComment,
     getCommentReplies,
     replyToComment,

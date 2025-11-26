@@ -60,7 +60,7 @@ export default function VideoDetailPage() {
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
   const [isOwner, setIsOwner] = useState(false);
   const [showPremiumDialog, setShowPremiumDialog] = useState(false);
-  const [premiumChannelId, setPremiumChannelId] = useState<number>(0);
+  const [premiumChannelId, setPremiumChannelId] = useState<string>("");
 
   // Fetch video data
   useEffect(() => {

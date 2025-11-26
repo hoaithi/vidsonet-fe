@@ -1,12 +1,5 @@
 import apiClient, { ApiResponse } from "./api-client";
-import {
-  Post,
-  PostCreateRequest,
-  PostUpdateRequest,
-  PostComment,
-  PostCommentCreateRequest,
-  PostCommentUpdateRequest,
-} from "@/types/post";
+import { Post, PostCreateRequest, PostUpdateRequest } from "@/types/post";
 import { PaginatedResponse } from "@/types/api";
 
 export const PostService = {
@@ -30,7 +23,7 @@ export const PostService = {
     }
 
     // Fallback JSON payload when no image
-    const response = await apiClient.post<ApiResponse<Post>>("/posts", {
+    const response = await apiClient.post<ApiResponse<Post>>("/post", {
       title: data.title,
       content: data.content ?? "",
     });
@@ -39,7 +32,7 @@ export const PostService = {
 
   // Get post by ID
   getPostById: async (id: string): Promise<ApiResponse<Post>> => {
-    const response = await apiClient.get<ApiResponse<Post>>(`/posts/${id}`);
+    const response = await apiClient.get<ApiResponse<Post>>(`/post/${id}`);
     return response.data;
   },
 
@@ -85,7 +78,7 @@ export const PostService = {
       formData.append("image", data.imageFile);
 
       const response = await apiClient.put<ApiResponse<Post>>(
-        `/posts/${id}`,
+        `/post/${id}`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -94,7 +87,7 @@ export const PostService = {
       return response.data;
     }
 
-    const response = await apiClient.put<ApiResponse<Post>>(`/posts/${id}`, {
+    const response = await apiClient.put<ApiResponse<Post>>(`/post/${id}`, {
       ...(data.title !== undefined ? { title: data.title } : {}),
       ...(data.content !== undefined ? { content: data.content } : {}),
     });
@@ -103,14 +96,14 @@ export const PostService = {
 
   // Delete post
   deletePost: async (id: string): Promise<ApiResponse<void>> => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/posts/${id}`);
+    const response = await apiClient.delete<ApiResponse<void>>(`/post/${id}`);
     return response.data;
   },
 
   // Like post
   likePost: async (id: string): Promise<ApiResponse<Post>> => {
     const response = await apiClient.post<ApiResponse<Post>>(
-      `/posts/${id}/like`
+      `/post/${id}/like`
     );
     return response.data;
   },
@@ -118,82 +111,7 @@ export const PostService = {
   // Dislike post
   dislikePost: async (id: string): Promise<ApiResponse<Post>> => {
     const response = await apiClient.post<ApiResponse<Post>>(
-      `/posts/${id}/dislike`
-    );
-    return response.data;
-  },
-
-  // Get post comments
-  getPostComments: async (
-    postId: string
-  ): Promise<ApiResponse<PostComment[]>> => {
-    const response = await apiClient.get<ApiResponse<PostComment[]>>(
-      `/post-comments/post/${postId}`
-    );
-    return response.data;
-  },
-
-  // Create comment on post
-  createComment: async (
-    data: PostCommentCreateRequest
-  ): Promise<ApiResponse<PostComment>> => {
-    const response = await apiClient.post<ApiResponse<PostComment>>(
-      "/post-comments",
-      data
-    );
-    return response.data;
-  },
-
-  // Get comment by ID
-  getCommentById: async (id: string): Promise<ApiResponse<PostComment>> => {
-    const response = await apiClient.get<ApiResponse<PostComment>>(
-      `/post-comments/${id}`
-    );
-    return response.data;
-  },
-
-  // Get comment replies
-  getCommentReplies: async (
-    commentId: string
-  ): Promise<ApiResponse<PostComment[]>> => {
-    const response = await apiClient.get<ApiResponse<PostComment[]>>(
-      `/post-comments/${commentId}/replies`
-    );
-    return response.data;
-  },
-
-  // Update comment
-  updateComment: async (
-    id: string,
-    data: PostCommentUpdateRequest
-  ): Promise<ApiResponse<PostComment>> => {
-    const response = await apiClient.put<ApiResponse<PostComment>>(
-      `/post-comments/${id}`,
-      data
-    );
-    return response.data;
-  },
-
-  // Delete comment
-  deleteComment: async (id: string): Promise<ApiResponse<void>> => {
-    const response = await apiClient.delete<ApiResponse<void>>(
-      `/post-comments/${id}`
-    );
-    return response.data;
-  },
-
-  // Heart comment (for post owners)
-  heartComment: async (id: string): Promise<ApiResponse<PostComment>> => {
-    const response = await apiClient.post<ApiResponse<PostComment>>(
-      `/post-comments/${id}/heart`
-    );
-    return response.data;
-  },
-
-  // Unheart comment
-  unheartComment: async (id: string): Promise<ApiResponse<PostComment>> => {
-    const response = await apiClient.delete<ApiResponse<PostComment>>(
-      `/post-comments/${id}/heart`
+      `/post/${id}/dislike`
     );
     return response.data;
   },

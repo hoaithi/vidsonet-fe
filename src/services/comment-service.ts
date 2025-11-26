@@ -2,9 +2,17 @@ import apiClient, { ApiResponse } from './api-client';
 import { Comment, CommentUpdateRequest, CommentCreateRequest } from '@/types/video';
 
 export const CommentService = {
+  // Get comments for an item (video, post, etc.)
+  getItemComments: async (itemId: string, commentType?: string): Promise<ApiResponse<Comment[]>> => {
+    const response = await apiClient.get<ApiResponse<Comment[]>>(`/comment/${itemId}`, {
+      params: commentType ? { commentType } : undefined,
+    });
+    return response.data;
+  },
+
   // Add comment to video
-  addComment: async (id: string, data: CommentCreateRequest): Promise<ApiResponse<Comment>> => {
-    const response = await apiClient.post<ApiResponse<Comment>>(`/comment/${id}/comments`, data);
+  addComment: async (itemId: string, data: CommentCreateRequest): Promise<ApiResponse<Comment>> => {
+    const response = await apiClient.post<ApiResponse<Comment>>(`/comment`, data);
     return response.data;
   },
 

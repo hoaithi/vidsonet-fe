@@ -38,8 +38,8 @@ export default function NotificationsPage() {
       
       try {
         const response = await NotificationService.getUserNotifications();
-        if (response.data) {
-          setNotifications(response.data.content);
+        if (response.result) {
+          setNotifications(response.result.content);
         }
       } catch (error) {
         console.error('Error fetching notifications:', error);
@@ -135,18 +135,18 @@ export default function NotificationsPage() {
               <div className="flex gap-3">
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={notification.actor.profilePicture || ''}
-                    alt={notification.actor.username}
+                    src={notification.actor.avatarUrl || ''}
+                    alt={notification.actor.fullName}
                   />
                   <AvatarFallback>
-                    {notification.actor.username.charAt(0).toUpperCase()}
+                    {notification.actor.fullName?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">
-                      {notification.actor.channelName || notification.actor.username}
+                      {notification.actor.fullName}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {getRelativeTime(notification.createdAt)}

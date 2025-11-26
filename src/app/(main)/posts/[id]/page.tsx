@@ -15,7 +15,7 @@ import { Post } from '@/types/post';
 
 export default function PostDetailPage() {
   const params = useParams();
-  const postId = parseInt(params.id as string);
+  const postId = params.id as string;
   const { isAuthenticated, profile } = useAuthStore();
   const { getPost } = usePosts();
   const [post, setPost] = useState<Post | null>(null);

@@ -55,7 +55,7 @@ export const VideoService = {
     data: VideoUpdateRequest
   ): Promise<ApiResponse<Video>> => {
     const response = await apiClient.put<ApiResponse<Video>>(
-      `/videos/${id}`,
+      `/video/${id}`,
       data
     );
     return response.data;
@@ -160,7 +160,7 @@ export const VideoService = {
     data: VideoProgressUpdateRequest
   ): Promise<ApiResponse<void>> => {
     const response = await apiClient.post<ApiResponse<void>>(
-      `/video/history/${id}`,
+      `/playlist/history/${id}`,
       data
     );
     return response.data;
@@ -185,32 +185,32 @@ export const VideoService = {
   // Add to watch later
   addToWatchLater: async (videoId: string): Promise<ApiResponse<void>> => {
     const response = await apiClient.post<ApiResponse<void>>(
-      `/video/watch-later`,{videoId}
+      `/playlist/watch-later`,{videoId}
     );
     return response.data;
   },
 
 
 
-  // Get video comments
-  getVideoComments: async (id: string): Promise<ApiResponse<Comment[]>> => {
-    const response = await apiClient.get<ApiResponse<Comment[]>>(
-      `/comment/${id}`
-    );
-    return response.data;
-  },
+  // // Get video comments
+  // getVideoComments: async (id: string): Promise<ApiResponse<Comment[]>> => {
+  //   const response = await apiClient.get<ApiResponse<Comment[]>>(
+  //     `/comment/${id}`
+  //   );
+  //   return response.data;
+  // },
 
   // Add comment to video
-  addComment: async (
-    id: string,
-    data: CommentCreateRequest
-  ): Promise<ApiResponse<Comment>> => {
-    const response = await apiClient.post<ApiResponse<Comment>>(
-      `/comment`,
-      data
-    );
-    return response.data;
-  },
+  // addComment: async (
+  //   id: string,
+  //   data: CommentCreateRequest
+  // ): Promise<ApiResponse<Comment>> => {
+  //   const response = await apiClient.post<ApiResponse<Comment>>(
+  //     `/comment`,
+  //     data
+  //   );
+  //   return response.data;
+  // },
 
   getUserReaction: async (
     videoId: string,
