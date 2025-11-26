@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -18,7 +17,9 @@ import {
   Home,
   Video,
   FileText,
-  Plus
+  Plus,
+  MessageCircle,
+  LayoutDashboard,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -330,6 +331,14 @@ export function Navbar() {
                     <DropdownMenuItem onClick={() => router.push("/posts")}>
                       <FileText className="mr-2 h-4 w-4" />
                       <span>Your Posts</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push("/chat")}>
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      <span>Your Messages</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <span>Your Dashboard</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => router.push("/settings")}>
                       <Settings className="mr-2 h-4 w-4" />

@@ -1,13 +1,157 @@
-    'use client';
+//     'use client';
+// import { useEffect, useState, useRef } from 'react';
+// import { useRouter } from 'next/navigation';
+// import { useForm } from 'react-hook-form';
+// import { zodResolver } from '@hookform/resolvers/zod';
+// import * as z from 'zod';
+// import { Loader2, Upload, User } from 'lucide-react';
 
-import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Loader2, Upload, User } from 'lucide-react';
+// import { Button } from '@/components/ui/button';
+// import {
+//   Form,
+//   FormControl,
+//   FormDescription,
+//   FormField,
+//   FormItem,
+//   FormLabel,
+//   FormMessage,
+// } from '@/components/ui/form';
+// import { Input } from '@/components/ui/input';
+// import { Textarea } from '@/components/ui/textarea';
+// import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+// import { Separator } from '@/components/ui/separator';
+// import { Card, CardContent } from '@/components/ui/card';
 
-import { Button } from '@/components/ui/button';
+// import { useAuthStore } from '@/store/auth-store';
+// import { useUser } from '@/lib/hooks/use-user';
+// import { updateProfileSchema } from '@/lib/validation';
+
+// export default function SettingsPage() {
+//   const { isAuthenticated, profile } = useAuthStore();
+//   const { updateProfile } = useUser();
+//   const router = useRouter();
+//   const [isSubmitting, setIsSubmitting] = useState(false);
+
+//   const [profilePreview, setProfilePreview] = useState<string | null>(null);
+//   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+
+//   const profileInputRef = useRef<HTMLInputElement>(null);
+//   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+//   // Redirect if not authenticated
+//   useEffect(() => {
+//     if (!isAuthenticated) {
+//       router.push('/login');
+//     }
+//   }, [isAuthenticated, router]);
+
+//   // Initialize form with user data
+//   const form = useForm<z.infer<typeof updateProfileSchema>>({
+//     resolver: zodResolver(updateProfileSchema),
+//     defaultValues: {
+//       fullName: profile?.fullName || '',
+//       city: profile?.city || '',
+//       dob: profile?.dob || '',
+//       description: profile?.description || '',
+//       profilePicture: undefined,
+//       bannerImage: undefined,
+//     },
+//   });
+
+//   // Update form values when user data changes
+//   useEffect(() => {
+//     if (profile) {
+//       form.reset({
+//         fullName: profile.fullName || '',
+//         city: profile.city || '',
+//         dob: profile.dob || '',
+//         description: profile.description || '',
+//         profilePicture: undefined,
+//         bannerImage: undefined,
+//       });
+
+//       // Set image previews
+//       setProfilePreview(profile.avatarUrl || null);
+//       setBannerPreview(profile.bannerUrl || null);
+
+//     }
+//   }, [profile, form]);
+
+//   // Handle form submission
+//   const onSubmit = async (values: z.infer<typeof updateProfileSchema>) => {
+//     if (!isAuthenticated || !profile) return;
+
+//     setIsSubmitting(true);
+
+//     // Add image URLs to form values if we have them
+//     const updateData = {
+//       id: profile.id,
+//       fullName: values.fullName,
+//       city: values.city,
+//       dob: values.dob,
+//       description: values.description,
+//       profilePicture: values.profilePicture,
+//       bannerImage: values.bannerImage,
+//     };
+
+//     try {
+//       await updateProfile(updateData);
+//       // Success is handled by the useUser hook
+//     } catch (error) {
+//       console.error('Error updating profile:', error);
+//     } finally {
+//       setIsSubmitting(false);
+//     }
+//   };
+
+//   // Handle profile picture upload
+//   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const file = e.target.files?.[0];
+//     if (file) {
+//       form.setValue('profilePicture', file, {shouldValidate: true}); // Set the file in the form state
+//       const url = URL.createObjectURL(file);
+//       setProfilePreview(url);
+//     }
+//   };
+
+//   // Handle banner image upload
+//   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const file = e.target.files?.[0];
+//     if (file) {
+//       form.setValue('bannerImage', file, {shouldValidate: true});
+//       const url = URL.createObjectURL(file);
+//       setBannerPreview(url);
+//     }
+//   };
+
+//   // Handle channel picture upload
+
+//   // Cleanup Blob URLs
+//   useEffect(() => {
+//     return () => {
+//       if (profilePreview && profilePreview.startsWith('blob:')) {
+//         URL.revokeObjectURL(profilePreview);
+//       }
+//       if (bannerPreview && bannerPreview.startsWith('blob:')) {
+//         URL.revokeObjectURL(bannerPreview);
+//       }
+//     };
+//   }, [profilePreview, bannerPreview]);
+
+//   if (!isAuthenticated || !profile) {
+//     return null;
+//   }
+
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Loader2, Upload, User } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -16,49 +160,46 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { useAuthStore } from '@/store/auth-store';
-import { useUser } from '@/lib/hooks/use-user';
-import { updateProfileSchema } from '@/lib/validation';
-
-
-
+import { useAuthStore, useHasHydrated } from "@/store/auth-store"; // ✅ Import useHasHydrated
+import { useUser } from "@/lib/hooks/use-user";
+import { updateProfileSchema } from "@/lib/validation";
 
 export default function SettingsPage() {
   const { isAuthenticated, profile } = useAuthStore();
+  const hasHydrated = useHasHydrated(); // ✅ Sử dụng hydration check
   const { updateProfile } = useUser();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
-  
-  
+
   const profileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
-  
 
-  // Redirect if not authenticated
+  // ✅ Chỉ redirect sau khi hydrate xong
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
+    if (hasHydrated && !isAuthenticated) {
+      router.push("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [hasHydrated, isAuthenticated, router]);
 
   // Initialize form with user data
   const form = useForm<z.infer<typeof updateProfileSchema>>({
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
-      fullName: profile?.fullName || '',
-      city: profile?.city || '',
-      dob: profile?.dob || '',
-      description: profile?.description || '',
+      fullName: "",
+      city: "",
+      dob: "",
+      description: "",
       profilePicture: undefined,
       bannerImage: undefined,
     },
@@ -68,28 +209,25 @@ export default function SettingsPage() {
   useEffect(() => {
     if (profile) {
       form.reset({
-        fullName: profile.fullName || '',
-        city: profile.city || '',
-        dob: profile.dob || '',
-        description: profile.description || '',
+        fullName: profile.fullName || "",
+        city: profile.city || "",
+        dob: profile.dob || "",
+        description: profile.description || "",
         profilePicture: undefined,
         bannerImage: undefined,
       });
-      
-      // Set image previews
+
       setProfilePreview(profile.avatarUrl || null);
       setBannerPreview(profile.bannerUrl || null);
-      
     }
   }, [profile, form]);
 
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof updateProfileSchema>) => {
     if (!isAuthenticated || !profile) return;
-    
+
     setIsSubmitting(true);
-    
-    // Add image URLs to form values if we have them
+
     const updateData = {
       id: profile.id,
       fullName: values.fullName,
@@ -99,22 +237,23 @@ export default function SettingsPage() {
       profilePicture: values.profilePicture,
       bannerImage: values.bannerImage,
     };
-    
+
     try {
       await updateProfile(updateData);
-      // Success is handled by the useUser hook
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error("Error updating profile:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Handle profile picture upload
-  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePictureChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
-      form.setValue('profilePicture', file, {shouldValidate: true}); // Set the file in the form state
+      form.setValue("profilePicture", file, { shouldValidate: true });
       const url = URL.createObjectURL(file);
       setProfilePreview(url);
     }
@@ -124,27 +263,46 @@ export default function SettingsPage() {
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      form.setValue('bannerImage', file, {shouldValidate: true});
+      form.setValue("bannerImage", file, { shouldValidate: true });
       const url = URL.createObjectURL(file);
       setBannerPreview(url);
     }
   };
 
-  // Handle channel picture upload
-  
-
   // Cleanup Blob URLs
   useEffect(() => {
     return () => {
-      if (profilePreview && profilePreview.startsWith('blob:')) {
+      if (profilePreview && profilePreview.startsWith("blob:")) {
         URL.revokeObjectURL(profilePreview);
       }
-      if (bannerPreview && bannerPreview.startsWith('blob:')) {
+      if (bannerPreview && bannerPreview.startsWith("blob:")) {
         URL.revokeObjectURL(bannerPreview);
       }
     };
   }, [profilePreview, bannerPreview]);
 
+  // ✅ Loading state khi chưa hydrate
+  if (!hasHydrated) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <Skeleton className="h-10 w-32 mb-6" />
+        <Card>
+          <CardContent className="p-6 space-y-6">
+            <Skeleton className="h-36 w-full" />
+            <div className="flex items-center gap-6">
+              <Skeleton className="h-24 w-24 rounded-full" />
+              <Skeleton className="h-10 w-48" />
+            </div>
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ✅ Sau khi hydrate, nếu không authenticated thì return null (đang redirect)
   if (!isAuthenticated || !profile) {
     return null;
   }
@@ -189,14 +347,14 @@ export default function SettingsPage() {
                   onClick={() => bannerInputRef.current?.click()}
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  {bannerPreview ? 'Change Banner' : 'Upload Banner'}
+                  {bannerPreview ? "Change Banner" : "Upload Banner"}
                 </Button>
               </div>
 
               {/* Profile Picture */}
               <div className="flex items-center gap-6 mb-8">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={profilePreview || ''} />
+                  <AvatarImage src={profilePreview || ""} />
                   <AvatarFallback className="text-xl">
                     {profile.fullName?.charAt(0).toUpperCase() || <User />}
                   </AvatarFallback>
@@ -225,7 +383,12 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label className="text-sm font-medium">Email</label>
-                  <Input value={profile.email || ''} disabled readOnly className="mt-1" />
+                  <Input
+                    value={profile.email || ""}
+                    disabled
+                    readOnly
+                    className="mt-1"
+                  />
                 </div>
               </div>
 
@@ -310,7 +473,7 @@ export default function SettingsPage() {
                   Saving...
                 </>
               ) : (
-                'Save Changes'
+                "Save Changes"
               )}
             </Button>
           </div>
