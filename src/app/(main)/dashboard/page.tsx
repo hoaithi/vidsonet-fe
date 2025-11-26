@@ -1,5 +1,4 @@
-"use client";
-import { useState, useMemo, useEffect } from "react";
+"use client";import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -114,7 +113,7 @@ function OverviewStatsCards({
     },
     {
       title: "Total Videos",
-      value: stats ? stats.videoCount.toString() : "0",
+      value: stats ? stats?.totalVideos?.toString() : "0",
       change: "+5.0%",
       changeType: "increase",
       icon: Video,
@@ -490,7 +489,7 @@ export default function DashboardPage() {
       viewsNum: video.viewCount,
       likesNum: video.likeCount,
       dateNum: new Date(video.publishedAt).getTime(),
-      engagementNum: video.engagementScore,
+      engagementNum: video.engagementScore ?? 0,
       comments: video.commentCount,
       dislikes: video.dislikeCount,
     }));
