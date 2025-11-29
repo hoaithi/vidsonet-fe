@@ -7,17 +7,7 @@ export const DashboardService = {
     profileId: string
   ): Promise<ApiResponse<ResultData>> => {
     const response = await apiClient.get<ApiResponse<ResultData>>(
-      `/video/dashboard/${profileId}`
-    );
-    return response.data;
-  },
-
-  // Get video by ID
-  getDashboarSubscribersById: async (
-    profileId: string
-  ): Promise<ApiResponse<ResultDataSubscription>> => {
-    const response = await apiClient.get<ApiResponse<ResultDataSubscription>>(
-      `/subscription/stats/subscribers/${profileId}`
+      `/video/my/dashboard/${profileId}`
     );
     return response.data;
   },

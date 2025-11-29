@@ -1,4 +1,5 @@
-"use client";import { Button } from "@/components/ui/button";
+"use client";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
 import { Loader2, MessageCircle } from "lucide-react";
@@ -90,7 +91,7 @@ export function ChannelInfoSection({
       <div className="flex items-center justify-between border-b pb-4">
         {/* Thông tin kênh */}
         <div className="flex items-center gap-3">
-          <Link href={`/channel/${channel.id}`}>
+          <Link href={`/profile/${channel.id}`}>
             <div className="relative w-12 h-12 rounded-full overflow-hidden">
               <Image
                 src={channel.avatarUrl || "/default-avatar.png"}

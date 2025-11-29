@@ -1,4 +1,5 @@
-"use client";import { useState, useMemo, useEffect } from "react";
+"use client";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -456,13 +457,9 @@ export default function DashboardPage() {
         setLoading(true);
 
         // Fetch both dashboard stats and subscription data
-        const [dashboardResponse, subscriptionResponse] = await Promise.all([
-          DashboardService.getDashboardByProfileId(profileId),
-          DashboardService.getDashboarSubscribersById(profileId),
-        ]);
-
+        const dashboardResponse =
+          await DashboardService.getDashboardByProfileId(profileId);
         setDashboardData(dashboardResponse.result);
-        setSubscriptionData(subscriptionResponse.result);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         // You can add error handling UI here
@@ -553,7 +550,7 @@ export default function DashboardPage() {
         <DashboardHeader onViewAnalytics={handleViewAnalytics} />
         <OverviewStatsCards
           stats={dashboardData?.stats || null}
-          subscriberCount={subscriptionData?.subscriberCount || 0}
+          subscriberCount={dashboardData?.totalUsers || 0}
         />
         <DashboardCharts stats={dashboardData?.stats || null} />
         <VideosTable

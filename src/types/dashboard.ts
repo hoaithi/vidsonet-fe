@@ -1,5 +1,4 @@
-export interface Stats {
-  totalViews: number;
+export interface Stats {  totalViews: number;
   totalLikes: number;
   totalDislikes: number;
   totalComments: number;
@@ -83,6 +82,25 @@ export interface ProfileItem {
 
 export interface ProfileListResponse {
   content: ProfileItem[];
+  pageable: {
+    pageNumber: number;
+    pageSize: number;
+    sort: any[];
+    offset: number;
+    paged: boolean;
+    unpaged: boolean;
+  };
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+export interface VideoListResponse {
+  content: VideoItem[];
   pageable: {
     pageNumber: number;
     pageSize: number;
