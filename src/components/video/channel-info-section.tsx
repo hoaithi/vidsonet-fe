@@ -21,6 +21,7 @@ interface ChannelInfoSectionProps {
   currentUserId?: string;
   currentUserName?: string;
   conversationId?: string;
+
   apiBaseUrl?: string;
   onRequestConversation?: () => Promise<string | null>; // Thêm callback để lấy conversationId
 }
@@ -34,6 +35,7 @@ export function ChannelInfoSection({
   currentUserId,
   currentUserName,
   conversationId: initialConversationId,
+
   onRequestConversation,
 }: ChannelInfoSectionProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);

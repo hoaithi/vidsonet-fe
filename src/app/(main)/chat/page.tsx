@@ -1,4 +1,5 @@
-"use client";import { Input } from "@/components/ui/input";
+"use client";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 import {
@@ -15,6 +16,9 @@ import {
   Trash,
   PhoneMissed,
   PhoneOff,
+  X,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { chatService } from "@/services/chat-service";
@@ -23,11 +27,96 @@ import {
   Conversation,
   ConversationList,
   Message,
+  MessageType,
 } from "@/types/chat";
 import { useSocketContext } from "@/providers/SocketProvider";
 import { useAuthStore } from "@/store/auth-store";
 import VideoCallModal from "@/components/video-call/VideoCallModal";
 import IncomingCallNotification from "@/components/video-call/IncomingCallNotification";
+import { ImagePreview } from "@/components/chat-detail/ChatDetailModal";
+import { Button } from "@/components/ui/button";
+
+// ✅ Image Preview Item Component
+function ImagePreviewItem({
+  preview,
+  onRemove,
+}: {
+  preview: string;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-blue-500">
+      <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+      <button
+        onClick={onRemove}
+        className="absolute top-1 right-1 bg-black/50 rounded-full p-0.5 hover:bg-black/70 transition-colors"
+      >
+        <XCircle className="w-4 h-4 text-white" />
+      </button>
+    </div>
+  );
+}
+
+// ✅ Image Message Component
+function ImageMessage({ images }: { images: string[] }) {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  return (
+    <>
+      <div
+        className={cn(
+          "grid gap-1",
+          images.length === 1
+            ? "grid-cols-1 max-w-[280px]"
+            : images.length === 2
+            ? "grid-cols-2 max-w-[280px]"
+            : images.length === 3
+            ? "grid-cols-3 max-w-[280px]"
+            : "grid-cols-2 max-w-[280px]"
+        )}
+      >
+        {images.map((url, idx) => (
+          <div
+            key={idx}
+            className="relative cursor-pointer rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
+            onClick={() => setSelectedImage(url)}
+          >
+            <img
+              src={url}
+              alt={`Image ${idx + 1}`}
+              className="w-full h-full object-cover"
+              style={{
+                aspectRatio: images.length === 1 ? "4/3" : "1/1",
+                minHeight: images.length === 1 ? "200px" : "120px",
+              }}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* ✅ Image Lightbox */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-4 right-4 text-white hover:bg-white/10 p-2 rounded-full"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={selectedImage}
+            alt="Full size"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
+  );
+}
 
 // ✅ CallMessage Component
 function CallMessage({ message }: { message: Message }) {
@@ -204,6 +293,12 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // ✅ Image upload states (thêm sau state error)
+  const [selectedImages, setSelectedImages] = useState<ImagePreview[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { profile } = useAuthStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -304,6 +399,47 @@ export default function ChatPage() {
     setIsIncomingCall(false);
     setIncomingCallData(null);
     setShowIncomingNotification(false);
+  };
+
+  // ✅ Handle image selection
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+
+    if (files.length + selectedImages.length > 10) {
+      setError("Chỉ có thể gửi tối đa 10 ảnh");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    const newPreviews: ImagePreview[] = files.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+
+    setSelectedImages((prev) => [...prev, ...newPreviews]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // ✅ Remove image preview
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages((prev) => {
+      const newPreviews = [...prev];
+      URL.revokeObjectURL(newPreviews[index].preview);
+      newPreviews.splice(index, 1);
+      return newPreviews;
+    });
+  };
+
+  // ✅ Upload images using chatService
+  const uploadImages = async (files: File[]): Promise<string[]> => {
+    try {
+      return await chatService.uploadChatImages(files);
+    } catch (error) {
+      console.error("❌ Upload error:", error);
+      throw error;
+    }
   };
 
   // Prepare friend data for call
@@ -436,6 +572,8 @@ export default function ChatPage() {
                 isSent: true,
                 tempId: undefined,
                 createdAt: data.message.createdAt,
+                images: data.message.images || msg.images, // ✅ THÊM
+                messageType: data.message.messageType || msg.messageType, // ✅ THÊM
               }
             : msg
         )
@@ -546,6 +684,7 @@ export default function ChatPage() {
         status: undefined,
         messageType: data.message.messageType || "text",
         metadata: data.message.metadata || undefined,
+        images: data.message.images || [],
       };
 
       console.log("✅ Created message object:", {
@@ -711,6 +850,8 @@ export default function ChatPage() {
         const messagesWithStatus = res.messages.map((msg: any) => ({
           ...msg,
           createdAt: msg.createdAt || new Date().toISOString(),
+          images: msg.metadata?.images || msg.images || [], // ✅ THÊM DÒNG NÀY
+          messageType: msg.messageType || MessageType.TEXT, // ✅ THÊM DÒNG NÀY
           status:
             msg.sender === "user"
               ? msg.isRead
@@ -753,54 +894,131 @@ export default function ChatPage() {
       conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // const handleSendMessage = async () => {
+  //   if (
+  //     !newMessage.trim() ||
+  //     !activeConversation ||
+  //     !socket ||
+  //     !profile?.id ||
+  //     selectedImages.length === 0
+  //   )
+  //     return;
+
+  //   console.log("📤 Sending message:", newMessage);
+  //   const tempId = `temp-${Date.now()}-${Math.random()}`;
+  //   const messageText = newMessage;
+  //   setNewMessage("");
+
+  //   const optimisticMessage: Message = {
+  //     id: tempId,
+  //     tempId,
+  //     text: messageText,
+  //     sender: "user",
+  //     timestamp: new Date().toLocaleTimeString("vi-VN", {
+  //       hour: "2-digit",
+  //       minute: "2-digit",
+  //     }),
+  //     createdAt: new Date().toISOString(),
+  //     status: "sending",
+  //   };
+
+  //   setListMessagesConversation((prev) => [...prev, optimisticMessage]);
+
+  //   setTimeout(() => scrollToBottom(), 100);
+
+  //   socket.emit("sendMessage", {
+  //     senderId: profile.id,
+  //     receiverId: activeConversation.receiverId,
+  //     content: messageText,
+  //     conversationId: activeConversation.id,
+  //     tempId,
+  //   });
+
+  //   setListConversation((prev) =>
+  //     prev.map((conv) =>
+  //       conv.id === activeConversation.id
+  //         ? {
+  //             ...conv,
+  //             lastMessage: messageText,
+  //             timestamp: new Date().toLocaleTimeString("vi-VN", {
+  //               hour: "2-digit",
+  //               minute: "2-digit",
+  //             }),
+  //           }
+  //         : conv
+  //     )
+  //   );
+  // };
+
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !activeConversation || !socket || !profile?.id)
-      return;
+    if (!activeConversation || !socket || !profile?.id) return;
+    if (!newMessage.trim() && selectedImages.length === 0) return;
 
-    console.log("📤 Sending message:", newMessage);
-    const tempId = `temp-${Date.now()}-${Math.random()}`;
-    const messageText = newMessage;
-    setNewMessage("");
+    setUploading(true);
 
-    const optimisticMessage: Message = {
-      id: tempId,
-      tempId,
-      text: messageText,
-      sender: "user",
-      timestamp: new Date().toLocaleTimeString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      createdAt: new Date().toISOString(),
-      status: "sending",
-    };
+    try {
+      let imageUrls: string[] = [];
 
-    setListMessagesConversation((prev) => [...prev, optimisticMessage]);
+      if (selectedImages.length > 0) {
+        imageUrls = await uploadImages(selectedImages.map((p) => p.file));
+      }
 
-    setTimeout(() => scrollToBottom(), 100);
+      const tempId = `temp-${Date.now()}-${Math.random()}`;
+      const messageText = newMessage.trim() || `${imageUrls.length} ảnh`;
 
-    socket.emit("sendMessage", {
-      senderId: profile.id,
-      receiverId: activeConversation.receiverId,
-      content: messageText,
-      conversationId: activeConversation.id,
-      tempId,
-    });
+      setNewMessage("");
+      selectedImages.forEach((p) => URL.revokeObjectURL(p.preview));
+      setSelectedImages([]);
 
-    setListConversation((prev) =>
-      prev.map((conv) =>
-        conv.id === activeConversation.id
-          ? {
-              ...conv,
-              lastMessage: messageText,
-              timestamp: new Date().toLocaleTimeString("vi-VN", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            }
-          : conv
-      )
-    );
+      const optimisticMessage: Message = {
+        id: tempId,
+        tempId,
+        text: messageText,
+        sender: "user",
+        timestamp: new Date().toLocaleTimeString("vi-VN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        createdAt: new Date().toISOString(),
+        status: "sending",
+        images: imageUrls.length > 0 ? imageUrls : undefined,
+        messageType:
+          imageUrls.length > 0 ? MessageType.IMAGE : MessageType.TEXT,
+      };
+
+      setListMessagesConversation((prev) => [...prev, optimisticMessage]);
+      setTimeout(() => scrollToBottom(), 100);
+
+      socket.emit("sendMessage", {
+        senderId: profile.id,
+        receiverId: activeConversation.receiverId,
+        content: messageText,
+        conversationId: activeConversation.id,
+        tempId,
+        images: imageUrls.length > 0 ? imageUrls : undefined,
+        messageType: imageUrls.length > 0 ? "image" : "text",
+      });
+
+      setListConversation((prev) =>
+        prev.map((conv) =>
+          conv.id === activeConversation.id
+            ? {
+                ...conv,
+                lastMessage: messageText,
+                timestamp: new Date().toLocaleTimeString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              }
+            : conv
+        )
+      );
+    } catch (error) {
+      setError("Không thể gửi tin nhắn. Vui lòng thử lại.");
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -818,6 +1036,13 @@ export default function ChatPage() {
       )
     );
   };
+
+  // ✅ Cleanup previews on unmount
+  useEffect(() => {
+    return () => {
+      selectedImages.forEach((p) => URL.revokeObjectURL(p.preview));
+    };
+  }, [selectedImages]);
 
   return (
     <>
@@ -1076,41 +1301,61 @@ export default function ChatPage() {
                             </div> */}
 
                             {/* ✅ CONDITIONAL RENDER DỰA VÀO messageType */}
-                            {message.messageType === "call" ? (
-                              <CallMessage message={message} />
-                            ) : (
-                              <div
-                                className={cn(
-                                  "px-3 py-2 rounded-[18px] shadow-sm",
-                                  "break-words overflow-wrap-anywhere word-break-break-word",
-                                  message.sender === "user"
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-white text-gray-900 border border-gray-200"
-                                )}
-                                style={{
-                                  wordBreak: "break-word",
-                                  overflowWrap: "anywhere",
-                                }}
-                              >
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                  {message.text}
-                                </p>
-                              </div>
-                            )}
+                            <div className="flex flex-col gap-1 min-w-0">
+                              {message.messageType === MessageType.CALL ? (
+                                <CallMessage message={message} />
+                              ) : (
+                                <>
+                                  {/* ✅ Image Block - Independent */}
+                                  {message.images &&
+                                    message.images.length > 0 && (
+                                      <div
+                                        className={cn(
+                                          "rounded-2xl overflow-hidden"
+                                        )}
+                                      >
+                                        <ImageMessage images={message.images} />
+                                      </div>
+                                    )}
+
+                                  {/* ✅ Text Block - Independent with word-break */}
+                                  {message.text &&
+                                    message.text !==
+                                      `${message.images?.length || 0} ảnh` && (
+                                      <div
+                                        className={cn(
+                                          "rounded-2xl px-3 py-2 break-words",
+                                          message.sender === "user"
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-white text-gray-800 border border-gray-200"
+                                        )}
+                                        style={{
+                                          wordBreak: "break-word",
+                                          overflowWrap: "anywhere",
+                                        }}
+                                      >
+                                        <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                                          {message.text}
+                                        </p>
+                                      </div>
+                                    )}
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           <div
                             className={cn(
-                              "mt-1 px-3 flex items-center gap-1.5",
+                              "flex items-center gap-1 mt-1 px-1",
                               message.sender === "user"
-                                ? "flex-row-reverse"
-                                : "ml-10"
+                                ? "justify-end"
+                                : "justify-start ml-10"
                             )}
                           >
-                            <span className="text-[11px] text-gray-500">
+                            <span className="text-[10px] text-gray-500">
                               {message.timestamp}
                             </span>
-                            {messageStatus && (
+                            {message.sender === "user" && messageStatus && (
                               <MessageStatusIcon status={messageStatus} />
                             )}
                           </div>
@@ -1144,6 +1389,21 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* ✅ Image Preview Area */}
+              {selectedImages.length > 0 && (
+                <div className="border-t border-gray-200 bg-gray-50 p-3">
+                  <div className="flex items-center gap-2 overflow-x-auto">
+                    {selectedImages.map((preview, index) => (
+                      <ImagePreviewItem
+                        key={index}
+                        preview={preview.preview}
+                        onRemove={() => handleRemoveImage(index)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Message Input */}
               <div className="p-2 border-t border-gray-200 bg-white flex-shrink-0">
                 <div className="flex items-center gap-2">
@@ -1151,10 +1411,24 @@ export default function ChatPage() {
                     <Paperclip className="w-5 h-5" />
                   </button>
 
-                  <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0 flex items-center justify-center">
+                  {/* ✅ Image Upload Button */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageSelect}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-blue-600 hover:bg-blue-50 h-9 w-9 flex-shrink-0"
+                    disabled={uploading}
+                  >
                     <ImageIcon className="w-5 h-5" />
-                  </button>
-
+                  </Button>
                   <div className="flex-1 relative">
                     <Input
                       placeholder="Nhập tin nhắn..."
@@ -1171,9 +1445,16 @@ export default function ChatPage() {
                   <button
                     onClick={handleSendMessage}
                     className="w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!newMessage.trim()}
+                    disabled={
+                      (!newMessage.trim() && selectedImages.length === 0) ||
+                      uploading
+                    }
                   >
-                    <Send className="w-4 h-4" />
+                    {uploading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>

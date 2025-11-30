@@ -1,24 +1,10 @@
-"use client";import { useEffect, useState } from "react";
+"use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  ThumbsUp,
-  ThumbsDown,
-  Clock,
-  Share2,
-  MoreHorizontal,
-} from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import VideoPlayer from "@/components/video/video-player";
 import CommentList from "@/components/video/comment-list";
 import { PremiumContentDialog } from "@/components/video/premium-content-dialog";

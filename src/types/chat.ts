@@ -1,5 +1,4 @@
-// export interface Message {//   id: string;
-//   text: string;
+// export interface Message {//   id: string;//   text: string;
 //   sender: "user" | "friend";
 //   timestamp: string;
 //   senderName?: string;
@@ -94,7 +93,7 @@ export interface Message {
 
   // ✅ Call Metadata (only for call messages)
   metadata?: CallMetadata;
-
+  images?: string[];
   // Status tracking
   status?: MessageStatus;
   tempId?: string; // For optimistic updates
