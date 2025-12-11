@@ -24,7 +24,7 @@ export const NotificationService = {
   },
 
   // Mark notification as read
-  markAsRead: async (id: number): Promise<ApiResponse<void>> => {
+  markAsRead: async (id: string): Promise<ApiResponse<void>> => {
     const response = await apiClient.put<ApiResponse<void>>(`/notifications/${id}/read`);
     return response.data;
   },
