@@ -18,7 +18,7 @@ import { getRelativeTime } from '@/lib/utils';
 
 export default function NotificationsPage() {
   const { isAuthenticated } = useAuthStore();
-  const { notifications, setNotifications, markAllAsRead } = useNotificationStore();
+  const { notifications, setNotifications, markAllAsRead, markAsRead } = useNotificationStore();
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -67,6 +67,7 @@ export default function NotificationsPage() {
     if (!notification.isRead) {
       try {
         await NotificationService.markAsRead(notification.id);
+        markAsRead(notification.id);
       } catch (error) {
         console.error('Error marking notification as read:', error);
       }
@@ -135,18 +136,18 @@ export default function NotificationsPage() {
               <div className="flex gap-3">
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={notification.actor.avatarUrl || ''}
-                    alt={notification.actor.fullName}
+                    src={notification.avatarUrl || ''}
+                    alt={notification.fullName}
                   />
                   <AvatarFallback>
-                    {notification.actor.fullName?.charAt(0).toUpperCase()}
+                    {notification.fullName?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">
-                      {notification.actor.fullName}
+                      {notification.fullName}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {getRelativeTime(notification.createdAt)}

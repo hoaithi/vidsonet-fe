@@ -27,12 +27,13 @@ export type EntityType =
   | 'MEMBERSHIP';
 
 export interface Notification {
-  id: number;
+  id: string;
   type: NotificationType;
   createdAt: string;
   isRead: boolean;
   content: string;
-  entityId: number;
+  entityId: string;
   entityType: EntityType;
-  actor: Profile;
+  fullName: string;
+  avatarUrl: string;
 }

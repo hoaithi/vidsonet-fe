@@ -66,6 +66,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { AuthResponse } from "@/types/auth";
 import { Profile } from "@/types/profile";
+import { removeLocalStorage } from "@/lib/utils";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -108,9 +109,14 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        // ❌ REMOVE - không cần xóa localStorage riêng
-        // removeLocalStorage('accessToken');
-        // removeLocalStorage('refreshToken');
+        // Ensure localStorage tokens are removed on logout
+        try {
+          removeLocalStorage("accessToken");
+          removeLocalStorage("refreshToken");
+          removeLocalStorage("user");
+        } catch (e) {
+          // best-effort cleanup
+        }
 
         set({
           isAuthenticated: false,
