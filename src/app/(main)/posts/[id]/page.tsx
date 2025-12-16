@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
 
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import PostCard from '@/components/post/post-card';
-import PostComments from '@/components/post/post-comments';
-import { usePosts } from '@/lib/hooks/use-posts';
-import { useAuthStore } from '@/store/auth-store';
-import { Post } from '@/types/post';
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import PostCard from "@/components/post/post-card";
+import PostComments from "@/components/post/post-comments";
+import { usePosts } from "@/lib/hooks/use-posts";
+import { useAuthStore } from "@/store/auth-store";
+import { Post } from "@/types/post";
 
 export default function PostDetailPage() {
   const params = useParams();
@@ -25,14 +25,16 @@ export default function PostDetailPage() {
   useEffect(() => {
     const fetchPost = async () => {
       setIsLoading(true);
-      
+
       try {
+        console.log("Fetching post with ID:", postId);
         const postData = await getPost(postId);
+        console.log("Fetched post data:", postData);
         if (postData) {
           setPost(postData);
         }
       } catch (error) {
-        console.error('Error fetching post:', error);
+        console.error("Error fetching post:", error);
       } finally {
         setIsLoading(false);
       }
@@ -44,7 +46,8 @@ export default function PostDetailPage() {
   }, [postId]);
 
   // Check if user is post owner
-  const isOwner = isAuthenticated && profile && post && profile.id === post.user.id;
+  const isOwner =
+    isAuthenticated && profile && post && profile.id === post.profileId;
 
   // Loading state
   if (isLoading) {
@@ -54,14 +57,14 @@ export default function PostDetailPage() {
           <Skeleton className="h-10 w-10" />
           <Skeleton className="h-6 w-24" />
         </div>
-        
+
         <div className="space-y-4">
           <Skeleton className="h-8 w-3/4" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-2/3" />
         </div>
-        
+
         <div className="flex gap-4">
           <Skeleton className="h-8 w-16" />
           <Skeleton className="h-8 w-16" />
@@ -94,21 +97,21 @@ export default function PostDetailPage() {
       {/* Back button */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link href={`/channel/${post.user.id}`}>
+          <Link href={`/posts`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Channel
+            Back to Posts
           </Link>
         </Button>
       </div>
 
       {/* Post content */}
       <div className="space-y-6">
-        <article>
+        {/* <article>
           <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
           <div className="whitespace-pre-line text-base leading-relaxed">
             {post.content}
           </div>
-        </article>
+        </article> */}
 
         {/* Post actions (embedded in PostCard but we can also show them here) */}
         <PostCard post={post} showActions={false} />

@@ -39,7 +39,8 @@ export function VideoPlayer({
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null);
+  const hideControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastMouseMoveRef = useRef<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -91,7 +92,9 @@ export function VideoPlayer({
     };
 
     const handlePause = () => {
-      setIsPlaying(false);
+        setIsPlaying(false);
+        // Keep controls visible when paused for easier interaction
+        setShowControls(true);
     };
 
     // Handle video ended
@@ -280,22 +283,30 @@ useEffect(() => {
     };
   }, []);
 
-  // Handle controls visibility
+  // Handle controls visibility (throttled for mousemove, immediate on enter/leave)
   const showControlsTemporarily = () => {
-    setShowControls(true);
-    
-    if (controlsTimeout) {
-      clearTimeout(controlsTimeout);
+    const now = Date.now();
+    // Throttle updates to prevent flicker on rapid mouse movements
+    if (now - lastMouseMoveRef.current < 100) {
+      return;
     }
-    
-    // Hide controls after 3 seconds of inactivity
-    const timeout = setTimeout(() => {
+    lastMouseMoveRef.current = now;
+
+    if (!showControls) {
+      setShowControls(true);
+    }
+
+    if (hideControlsTimeoutRef.current) {
+      clearTimeout(hideControlsTimeoutRef.current);
+      hideControlsTimeoutRef.current = null;
+    }
+
+    // Hide controls after 2 seconds of inactivity while playing
+    hideControlsTimeoutRef.current = setTimeout(() => {
       if (isPlaying) {
         setShowControls(false);
       }
-    }, 3000);
-    
-    setControlsTimeout(timeout);
+    }, 2000);
   };
 
   // Add mouse move event listener to show controls
@@ -308,19 +319,39 @@ useEffect(() => {
     };
 
     container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('mouseenter', () => {
+      // Always show immediately on mouse enter
+      if (hideControlsTimeoutRef.current) {
+        clearTimeout(hideControlsTimeoutRef.current);
+        hideControlsTimeoutRef.current = null;
+      }
+      setShowControls(true);
+    });
+    container.addEventListener('mouseleave', () => {
+      // Always hide immediately on mouse leave
+      if (hideControlsTimeoutRef.current) {
+        clearTimeout(hideControlsTimeoutRef.current);
+        hideControlsTimeoutRef.current = null;
+      }
+      setShowControls(false);
+    });
+
     return () => {
       container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('mouseenter', () => {});
+      container.removeEventListener('mouseleave', () => {});
     };
-  }, [isPlaying, controlsTimeout]);
+  }, [isPlaying]);
 
   // Clean up timeout on unmount
   useEffect(() => {
     return () => {
-      if (controlsTimeout) {
-        clearTimeout(controlsTimeout);
+      if (hideControlsTimeoutRef.current) {
+        clearTimeout(hideControlsTimeoutRef.current);
+        hideControlsTimeoutRef.current = null;
       }
     };
-  }, [controlsTimeout]);
+  }, []);
 
   // Skip forward 10 seconds
   const skipForward = () => {
@@ -384,8 +415,8 @@ useEffect(() => {
       
       {/* Video controls */}
       <div 
-        className={`absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 pointer-events-none ${
-          showControls ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200 ${
+          showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
         {/* Progress bar */}

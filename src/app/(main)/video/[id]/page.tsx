@@ -117,6 +117,24 @@ export default function VideoDetailPage() {
             checkSubscription(videoData.profileId);
             getSubscriberCount(videoData.profileId);
           }
+
+          // Load related videos from the same channel, excluding current video
+          try {
+            const relatedRes = await VideoService.getVideosByChannelId(
+              videoData.profileId.toString(),
+              0,
+              6,
+              'publishedAt',
+              'desc'
+            );
+            if (relatedRes.result) {
+              const items = relatedRes.result.content
+                .filter((v) => v.id !== videoId);
+              setRelatedVideos(items);
+            }
+          } catch (err) {
+            console.error('Failed to load related videos:', err);
+          }
         }
       } catch (error: any) {
         console.error("Error fetching video:", error);

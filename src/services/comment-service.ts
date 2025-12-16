@@ -57,7 +57,7 @@ export const CommentService = {
 
   // Unheart comment
   unheartComment: async (id: string): Promise<ApiResponse<Comment>> => {
-    const response = await apiClient.delete<ApiResponse<Comment>>(`/comment/${id}/heart`);
+    const response = await apiClient.post<ApiResponse<Comment>>(`/comment/${id}/heart`);
     return response.data;
   },
 

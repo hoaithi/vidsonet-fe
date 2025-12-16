@@ -9,7 +9,6 @@ export interface Post {
   updatedAt?: string;
   likeCount: number;
   dislikeCount: number;
-  user: Profile;
   profileImage: string;
   profileName: string;
   profileId: string;
