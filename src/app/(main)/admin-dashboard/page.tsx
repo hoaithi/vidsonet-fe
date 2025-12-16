@@ -83,7 +83,6 @@ const AdminDashboard = () => {
     fetchVideos,
     fetchProfiles,
   } = useAdminDashboard();
-  const [timeRange, setTimeRange] = useState("7d");
   const [userSearch, setUserSearch] = useState("");
   const [videoSearch, setVideoSearch] = useState("");
 
@@ -112,6 +111,14 @@ const AdminDashboard = () => {
     id: string;
     name: string;
   } | null>(null);
+
+
+  const [timeRange, setTimeRange] = useState("week");
+const [comparisonType, setComparisonType] = useState("previous");
+const [showCustomRange, setShowCustomRange] = useState(false);
+const [customStartDate, setCustomStartDate] = useState("");
+const [customEndDate, setCustomEndDate] = useState("");
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -155,20 +162,248 @@ const AdminDashboard = () => {
     videoSortDirection,
   ]);
 
+
   // Map API data to component stats
-  const stats = {
-    totalUsers: dashboardData?.totalUsers || 0,
-    activeUsers:
+const calculateComparison = (current: number, previous: number) => {
+  if (previous === 0) return 0;
+  return ((current - previous) / previous) * 100;
+};
+
+// Simulated comparison data (in real app, fetch from API based on timeRange and comparisonType)
+const previousStats = {
+  totalUsers: Math.floor(dashboardData?.totalUsers * 0.92 || 0),
+  activeUsers: Math.floor(
+    profilesData?.content.filter((p) => p.videoCount > 0).length * 0.88 || 0
+  ),
+  totalVideos: Math.floor(dashboardData?.stats.totalVideos * 0.85 || 0),
+  totalViews: Math.floor(dashboardData?.stats.totalViews * 0.78 || 0),
+};
+
+const stats = {
+  totalUsers: dashboardData?.totalUsers || 0,
+  activeUsers:
+    profilesData?.content.filter((p) => p.videoCount > 0).length || 0,
+  totalVideos: dashboardData?.stats.totalVideos || 0,
+  pendingVideos:
+    videosData?.content?.filter((v: VideoItem) => v.engagementScore === null)
+      .length || 0,
+  totalViews: dashboardData?.stats.totalViews || 0,
+  totalRevenue: 0,
+  pendingReports: 0,
+  newComments: dashboardData?.stats.totalComments || 0,
+  comparisons: {
+    totalUsers: calculateComparison(
+      dashboardData?.totalUsers || 0,
+      previousStats.totalUsers
+    ),
+    activeUsers: calculateComparison(
       profilesData?.content.filter((p) => p.videoCount > 0).length || 0,
-    totalVideos: dashboardData?.stats.totalVideos || 0,
-    pendingVideos:
-      videosData?.content?.filter((v: VideoItem) => v.engagementScore === null)
-        .length || 0,
-    totalViews: dashboardData?.stats.totalViews || 0,
-    totalRevenue: 0, // Calculate if you have revenue data
-    pendingReports: 0, // Add if you have reports endpoint
-    newComments: dashboardData?.stats.totalComments || 0,
-  };
+      previousStats.activeUsers
+    ),
+    totalVideos: calculateComparison(
+      dashboardData?.stats.totalVideos || 0,
+      previousStats.totalVideos
+    ),
+    totalViews: calculateComparison(
+      dashboardData?.stats.totalViews || 0,
+      previousStats.totalViews
+    ),
+  },
+};
+
+const TimeRangeSelector = () => (
+  <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-gray-700">Time Range:</span>
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setTimeRange("week")}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                timeRange === "week"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => setTimeRange("month")}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                timeRange === "month"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setTimeRange("year")}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                timeRange === "year"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Year
+            </button>
+            <button
+              onClick={() => setShowCustomRange(true)}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                timeRange === "custom"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Custom
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-semibold text-gray-700">Compare to:</span>
+        <select
+          value={comparisonType}
+          onChange={(e) => setComparisonType(e.target.value)}
+          className="px-4 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="previous">Previous Period</option>
+          <option value="lastYear">Same Period Last Year</option>
+          <option value="none">No Comparison</option>
+        </select>
+      </div>
+    </div>
+  </div>
+);
+
+
+const CustomRangeModal = () => {
+  if (!showCustomRange) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-800">Custom Date Range</h3>
+          <button
+            onClick={() => setShowCustomRange(false)}
+            className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={() => {
+                setTimeRange("custom");
+                setShowCustomRange(false);
+              }}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Apply
+            </button>
+            <button
+              onClick={() => setShowCustomRange(false)}
+              className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Growth data - you'll need historical data for this
+const generateGrowthData = () => {
+  const periods = timeRange === "week" ? 7 : timeRange === "month" ? 30 : 12;
+  const data = [];
+  const now = new Date();
+
+  for (let i = periods - 1; i >= 0; i--) {
+    const date = new Date(now);
+    if (timeRange === "week") {
+      date.setDate(date.getDate() - i);
+    } else if (timeRange === "month") {
+      date.setDate(date.getDate() - i);
+    } else {
+      date.setMonth(date.getMonth() - i);
+    }
+
+    const label =
+      timeRange === "year"
+        ? date.toLocaleDateString("en-US", { month: "short" })
+        : timeRange === "month"
+        ? date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        : date.toLocaleDateString("en-US", { weekday: "short" });
+
+    // Simulated growth data with realistic trends
+    const progress = (periods - i) / periods;
+    data.push({
+      period: label,
+      newUsers: Math.floor(
+        stats.totalUsers * (0.7 + progress * 0.3) * (0.03 + Math.random() * 0.02)
+      ),
+      activeUsers: Math.floor(
+        stats.activeUsers * (0.75 + progress * 0.25) * (0.85 + Math.random() * 0.15)
+      ),
+      videoUploads: Math.floor(
+        stats.totalVideos * (0.65 + progress * 0.35) * (0.02 + Math.random() * 0.03)
+      ),
+      views: Math.floor(
+        stats.totalViews * (0.6 + progress * 0.4) * (0.05 + Math.random() * 0.05)
+      ),
+    });
+  }
+
+  return data;
+};
+
+const growthData = generateGrowthData();
+
+  // Map API data to component stats
+  // const stats = {
+  //   totalUsers: dashboardData?.totalUsers || 0,
+  //   activeUsers:
+  //     profilesData?.content.filter((p) => p.videoCount > 0).length || 0,
+  //   totalVideos: dashboardData?.stats.totalVideos || 0,
+  //   pendingVideos:
+  //     videosData?.content?.filter((v: VideoItem) => v.engagementScore === null)
+  //       .length || 0,
+  //   totalViews: dashboardData?.stats.totalViews || 0,
+  //   totalRevenue: 0, // Calculate if you have revenue data
+  //   pendingReports: 0, // Add if you have reports endpoint
+  //   newComments: dashboardData?.stats.totalComments || 0,
+  // };
 
   // Map profiles to users data
   const usersData =
@@ -237,50 +472,50 @@ const AdminDashboard = () => {
     .slice(0, 3);
 
   // Growth data - you'll need historical data for this
-  const growthData = [
-    {
-      month: "Jan",
-      users: stats.totalUsers * 0.67,
-      videos: stats.totalVideos * 0.7,
-      revenue: 42000,
-    },
-    {
-      month: "Feb",
-      users: stats.totalUsers * 0.73,
-      videos: stats.totalVideos * 0.75,
-      revenue: 43500,
-    },
-    {
-      month: "Mar",
-      users: stats.totalUsers * 0.78,
-      videos: stats.totalVideos * 0.8,
-      revenue: 44800,
-    },
-    {
-      month: "Apr",
-      users: stats.totalUsers * 0.84,
-      videos: stats.totalVideos * 0.85,
-      revenue: 46200,
-    },
-    {
-      month: "May",
-      users: stats.totalUsers * 0.89,
-      videos: stats.totalVideos * 0.9,
-      revenue: 47100,
-    },
-    {
-      month: "Jun",
-      users: stats.totalUsers * 0.94,
-      videos: stats.totalVideos * 0.95,
-      revenue: 47800,
-    },
-    {
-      month: "Jul",
-      users: stats.totalUsers,
-      videos: stats.totalVideos,
-      revenue: 48900,
-    },
-  ];
+  // const growthData = [
+  //   {
+  //     month: "Jan",
+  //     users: stats.totalUsers * 0.67,
+  //     videos: stats.totalVideos * 0.7,
+  //     revenue: 42000,
+  //   },
+  //   {
+  //     month: "Feb",
+  //     users: stats.totalUsers * 0.73,
+  //     videos: stats.totalVideos * 0.75,
+  //     revenue: 43500,
+  //   },
+  //   {
+  //     month: "Mar",
+  //     users: stats.totalUsers * 0.78,
+  //     videos: stats.totalVideos * 0.8,
+  //     revenue: 44800,
+  //   },
+  //   {
+  //     month: "Apr",
+  //     users: stats.totalUsers * 0.84,
+  //     videos: stats.totalVideos * 0.85,
+  //     revenue: 46200,
+  //   },
+  //   {
+  //     month: "May",
+  //     users: stats.totalUsers * 0.89,
+  //     videos: stats.totalVideos * 0.9,
+  //     revenue: 47100,
+  //   },
+  //   {
+  //     month: "Jun",
+  //     users: stats.totalUsers * 0.94,
+  //     videos: stats.totalVideos * 0.95,
+  //     revenue: 47800,
+  //   },
+  //   {
+  //     month: "Jul",
+  //     users: stats.totalUsers,
+  //     videos: stats.totalVideos,
+  //     revenue: 48900,
+  //   },
+  // ];
 
   // User demographics
   const userDemographicsData = [
@@ -489,34 +724,65 @@ const AdminDashboard = () => {
   const filteredVideos = videosData_mapped;
 
   console.log("filteredVideos", filteredVideos);
+  // const StatCard = ({ icon: Icon, title, value, change, color }: any) => (
+  //   <div
+  //     className="bg-white rounded-lg shadow p-4 border-l-4"
+  //     style={{ borderColor: color }}
+  //   >
+  //     <div className="flex items-center justify-between">
+  //       <div>
+  //         <p className="text-gray-500 text-xs font-medium">{title}</p>
+  //         <p className="text-xl font-bold mt-1">{value.toLocaleString()}</p>
+  //         {change && (
+  //           <p
+  //             className={`text-xs mt-1 ${
+  //               change > 0 ? "text-green-600" : "text-red-600"
+  //             }`}
+  //           >
+  //             {change > 0 ? "↑" : "↓"} {Math.abs(change)}%
+  //           </p>
+  //         )}
+  //       </div>
+  //       <div
+  //         className="p-2 rounded-full"
+  //         style={{ backgroundColor: color + "20" }}
+  //       >
+  //         <Icon size={20} style={{ color }} />
+  //       </div>
+  //     </div>
+  //   </div>
+  // );
+
+
+
+
+
+
   const StatCard = ({ icon: Icon, title, value, change, color }: any) => (
-    <div
-      className="bg-white rounded-lg shadow p-4 border-l-4"
-      style={{ borderColor: color }}
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-500 text-xs font-medium">{title}</p>
-          <p className="text-xl font-bold mt-1">{value.toLocaleString()}</p>
-          {change && (
-            <p
-              className={`text-xs mt-1 ${
-                change > 0 ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {change > 0 ? "↑" : "↓"} {Math.abs(change)}%
-            </p>
-          )}
-        </div>
-        <div
-          className="p-2 rounded-full"
-          style={{ backgroundColor: color + "20" }}
-        >
-          <Icon size={20} style={{ color }} />
-        </div>
+  <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 hover:shadow-xl transition-shadow" style={{ borderColor: color }}>
+    <div className="flex items-center justify-between mb-4">
+      <div className="p-3 rounded-xl" style={{ backgroundColor: color + "15" }}>
+        <Icon size={28} style={{ color }} />
       </div>
+      {change !== undefined && comparisonType !== "none" && (
+        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+          change > 0 ? "bg-green-50 text-green-600" : change < 0 ? "bg-red-50 text-red-600" : "bg-gray-50 text-gray-600"
+        }`}>
+          {change > 0 ? "↑" : change < 0 ? "↓" : "="} {Math.abs(change).toFixed(1)}%
+        </div>
+      )}
     </div>
-  );
+    <div>
+      <p className="text-gray-500 text-sm font-medium mb-1">{title}</p>
+      <p className="text-3xl font-bold text-gray-800">{value.toLocaleString()}</p>
+      {comparisonType !== "none" && (
+        <p className="text-xs text-gray-400 mt-1">
+          vs {comparisonType === "previous" ? "previous period" : "last year"}
+        </p>
+      )}
+    </div>
+  </div>
+);
 
   const TabButton = ({ id, label, icon: Icon }: any) => (
     <button
@@ -1001,17 +1267,6 @@ const AdminDashboard = () => {
                 <p className="text-xs text-gray-500">Video Sharing Platform</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="24h">24h</option>
-                <option value="7d">7 days</option>
-                <option value="30d">30 days</option>
-              </select>
-            </div>
           </div>
         </div>
       </div>
@@ -1022,13 +1277,12 @@ const AdminDashboard = () => {
             <TabButton id="overview" label="Overview" icon={BarChart3} />
             <TabButton id="users" label="Users" icon={Users} />
             <TabButton id="videos" label="Videos" icon={Video} />
-            <TabButton id="reports" label="Reports" icon={Flag} />
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-4">
-        {activeTab === "overview" && (
+        {/* {activeTab === "overview" && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <StatCard
@@ -1061,41 +1315,7 @@ const AdminDashboard = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2">
-                <AlertCircle className="text-yellow-600" size={20} />
-                <div>
-                  <p className="font-semibold text-yellow-800 text-sm">
-                    Pending Videos
-                  </p>
-                  <p className="text-xl font-bold text-yellow-900">
-                    {stats.pendingVideos}
-                  </p>
-                </div>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
-                <Flag className="text-red-600" size={20} />
-                <div>
-                  <p className="font-semibold text-red-800 text-sm">
-                    Pending Reports
-                  </p>
-                  <p className="text-xl font-bold text-red-900">
-                    {stats.pendingReports}
-                  </p>
-                </div>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
-                <MessageSquare className="text-blue-600" size={20} />
-                <div>
-                  <p className="font-semibold text-blue-800 text-sm">
-                    New Comments
-                  </p>
-                  <p className="text-xl font-bold text-blue-900">
-                    {stats.newComments}
-                  </p>
-                </div>
-              </div>
-            </div>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-white rounded-lg shadow p-4">
@@ -1228,37 +1448,210 @@ const AdminDashboard = () => {
                 </ResponsiveContainer>
               </div>
             </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-                <Video size={18} />
-                Video Performance by Category
-              </h3>
-              {/* <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={videoPerformanceData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="category" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8B5CF6" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#10B981" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar
-                    yAxisId="left"
-                    dataKey="videos"
-                    fill="#8B5CF6"
-                    name="Total Videos"
-                  />
-                  <Bar
-                    yAxisId="right"
-                    dataKey="views"
-                    fill="#10B981"
-                    name="Total Views"
-                  />
-                </BarChart>
-              </ResponsiveContainer> */}
-            </div>
           </div>
-        )}
+        )} */}
+
+
+        {activeTab === "overview" && (
+  <div className="space-y-6">
+    <TimeRangeSelector />
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCard
+        icon={Users}
+        title="Total Users"
+        value={stats.totalUsers}
+        change={stats.comparisons.totalUsers}
+        color="#3B82F6"
+      />
+      <StatCard
+        icon={Users}
+        title="Active Users (30d)"
+        value={stats.activeUsers}
+        change={stats.comparisons.activeUsers}
+        color="#10B981"
+      />
+      <StatCard
+        icon={Video}
+        title="Total Videos"
+        value={stats.totalVideos}
+        change={stats.comparisons.totalVideos}
+        color="#8B5CF6"
+      />
+      <StatCard
+        icon={Eye}
+        title="Total Views"
+        value={stats.totalViews}
+        change={stats.comparisons.totalViews}
+        color="#F59E0B"
+      />
+    </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-800">
+          <TrendingUp size={22} className="text-blue-600" />
+          User Growth
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={growthData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="period" 
+              style={{ fontSize: '12px' }}
+              stroke="#9CA3AF"
+            />
+            <YAxis 
+              style={{ fontSize: '12px' }}
+              stroke="#9CA3AF"
+            />
+            <Tooltip 
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}
+            />
+            <Legend />
+            <Line
+              type="monotone"
+              dataKey="newUsers"
+              stroke="#3B82F6"
+              strokeWidth={3}
+              name="New Users"
+              dot={{ fill: '#3B82F6', r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="activeUsers"
+              stroke="#10B981"
+              strokeWidth={3}
+              name="Active Users"
+              dot={{ fill: '#10B981', r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-800">
+          <Video size={22} className="text-purple-600" />
+          Video Uploads
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={growthData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="period" 
+              style={{ fontSize: '12px' }}
+              stroke="#9CA3AF"
+            />
+            <YAxis 
+              style={{ fontSize: '12px' }}
+              stroke="#9CA3AF"
+            />
+            <Tooltip 
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}
+            />
+            <Legend />
+            <Bar 
+              dataKey="videoUploads" 
+              fill="#8B5CF6" 
+              name="New Videos"
+              radius={[8, 8, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-800">
+          <Eye size={22} className="text-orange-600" />
+          View Performance
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={growthData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="period" 
+              style={{ fontSize: '12px' }}
+              stroke="#9CA3AF"
+            />
+            <YAxis 
+              style={{ fontSize: '12px' }}
+              stroke="#9CA3AF"
+            />
+            <Tooltip 
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}
+            />
+            <Legend />
+            <Bar 
+              dataKey="views" 
+              fill="#F59E0B" 
+              name="Total Views"
+              radius={[8, 8, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-800">
+          <Users size={22} className="text-gray-600" />
+          User Demographics
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={userDemographicsData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, percent }) =>
+                `${name} ${(percent * 100).toFixed(0)}%`
+              }
+              outerRadius={100}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {userDemographicsData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip 
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+
+    {/* Keep existing Recent Videos and Top Creators sections */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* ... existing code for Recent Videos and Top Creators ... */}
+    </div>
+  </div>
+)}
 
         {activeTab === "users" && (
           <>
@@ -2018,6 +2411,7 @@ const AdminDashboard = () => {
       <UserEditModal />
       <VideoEditModal />
       <DeleteConfirmModal />
+      <CustomRangeModal />
     </div>
   );
 };

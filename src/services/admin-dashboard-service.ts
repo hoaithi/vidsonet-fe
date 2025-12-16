@@ -46,6 +46,7 @@ import {
   ResultData,
   ProfileListResponse,
   VideoListResponse,
+  GrowthDataResponse,
 } from "@/types/dashboard";
 import apiClient, { ApiResponse } from "./api-client";
 
@@ -119,4 +120,28 @@ export const AdminDashboardService = {
     );
     return response.data;
   },
+
+  getGrowthData: async (
+    timeRange: string = "week",
+    comparisonType: string = "previous",
+    customStartDate?: string,
+    customEndDate?: string
+  ): Promise<ApiResponse<GrowthDataResponse>> => {
+    const params = new URLSearchParams({
+      timeRange,
+      comparisonType,
+    });
+
+    if (timeRange === "custom" && customStartDate && customEndDate) {
+      params.append("customStartDate", customStartDate);
+      params.append("customEndDate", customEndDate);
+    }
+
+    const response = await apiClient.get<ApiResponse<GrowthDataResponse>>(
+      `video/admin/growth-data?${params.toString()}`
+    );
+
+    return response.data;
+  },
+
 };

@@ -1,4 +1,5 @@
-export interface Stats {  totalViews: number;
+export interface Stats {
+  totalViews: number;
   totalLikes: number;
   totalDislikes: number;
   totalComments: number;
@@ -23,6 +24,37 @@ export interface TopVideo {
   hearted: boolean;
   engagementScore: number | null;
   isPremium: boolean;
+}
+
+export interface ResultPaymentData {
+  totalMemberships: number;
+  activeMemberships: number;
+  totalMembershipTiers: number;
+  activeMembershipTiers: number;
+  totalPayments: number;
+  completedPayments: number;
+  totalRevenue: number;
+  totalMembers: number;
+  channelRevenue: number;
+}
+
+export interface MonthlyStatsDTO {
+  month: string; // "Jan 2024"
+  year: number;
+  monthNumber: number;
+  newMembers: number;
+  totalMembers: number; // Cumulative
+  revenue: number;
+  cumulativeRevenue: number;
+  newPayments: number;
+}
+
+export interface MembershipMonthlyStatsResponse {
+  monthlyData: MonthlyStatsDTO[];
+  overallStats: ResultPaymentData;
+  totalMonths: number;
+  startDate: string;
+  endDate: string;
 }
 
 export interface ResultData {
@@ -121,4 +153,58 @@ export interface VideoListResponse {
 export interface ResultDataSubscription {
   subscriberCount: number;
   subscribingCount: number;
+}
+
+export interface MonthlyVideoStatsDTO {
+  month: string;
+  year: number;
+  monthNumber: number;
+  newVideos: number;
+  totalVideos: number;
+  newViews: number;
+  totalViews: number;
+  newLikes: number;
+  totalLikes: number;
+  newComments: number;
+  totalComments: number;
+  averageEngagementRate: number;
+  newSubscribers: number;
+}
+
+export interface VideoMonthlyStatsResponse {
+  monthlyData: MonthlyVideoStatsDTO[];
+  overallStats: {
+    totalViews: number;
+    totalLikes: number;
+    totalDislikes: number;
+    totalComments: number;
+    totalVideos: number;
+  };
+  totalSubscribers: number;
+  totalMonths: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface VideoGrowthStatsDTO {
+  period: string; // "Mon", "Jan 15", "January"
+  newUsers: number;
+  activeUsers: number;
+  videoUploads: number;
+  views: number;
+  year: number;
+  month: number;
+  day?: number;
+}
+
+
+
+export interface GrowthDataResponse {
+  growthData: VideoGrowthStatsDTO[];
+  currentPeriodStats: Stats;
+  previousPeriodStats: Stats | null;
+  timeRange: string;
+  comparisonType: string;
+  startDate: string;
+  endDate: string;
 }
