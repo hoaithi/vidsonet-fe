@@ -43,7 +43,7 @@ export const PostService = {
     size: number = 10
   ): Promise<ApiResponse<PaginatedResponse<Post>>> => {
     const response = await apiClient.get<ApiResponse<PaginatedResponse<Post>>>(
-      `/post/${userId}`,
+      `/post/user/${userId}`,
       {
         params: {
           page,

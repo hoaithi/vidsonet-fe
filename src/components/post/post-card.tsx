@@ -31,6 +31,11 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
   const { isAuthenticated, profile } = useAuthStore();
   const { likePost, dislikePost, deletePost } = usePosts();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [isDisliking, setIsDisliking] = useState(false);
+  const [postData, setPostData] = useState<Post>(post);
+  const [hasLiked, setHasLiked] = useState<boolean>(false);
+  const [hasDisliked, setHasDisliked] = useState<boolean>(false);
 
   const isOwner = isAuthenticated && profile && profile.id === post.profileId;
 
@@ -40,8 +45,15 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
       window.location.href = '/login';
       return;
     }
-    
-    await likePost(post.id);
+    if (isLiking) return;
+    setIsLiking(true);
+    const updated = await likePost(post.id);
+    if (updated) {
+      setPostData(updated);
+      setHasLiked(true);
+      setHasDisliked(false);
+    }
+    setIsLiking(false);
   };
 
   // Handle dislike
@@ -50,8 +62,15 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
       window.location.href = '/login';
       return;
     }
-    
-    await dislikePost(post.id);
+    if (isDisliking) return;
+    setIsDisliking(true);
+    const updated = await dislikePost(post.id);
+    if (updated) {
+      setPostData(updated);
+      setHasDisliked(true);
+      setHasLiked(false);
+    }
+    setIsDisliking(false);
   };
 
   // Handle delete
@@ -130,11 +149,11 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
       
       <CardContent className="pt-0">
         <div className="space-y-3">
-          {post.imageUrl && (
+          {postData.imageUrl && (
             <div className="relative w-full overflow-hidden rounded-md bg-muted aspect-[4/3] sm:aspect-video">
               <Image
-                src={post.imageUrl}
-                alt={post.title}
+                src={postData.imageUrl}
+                alt={postData.title}
                 fill
                 sizes="100vw"
                 className="object-cover"
@@ -142,22 +161,22 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
               />
             </div>
           )}
-          <Link href={`/posts/${post.id}`} className="block">
+          <Link href={`/posts/${postData.id}`} className="block">
             <h2 className="text-lg font-semibold hover:text-primary transition-colors">
-              {post.title}
+              {postData.title}
             </h2>
           </Link>
           
           <div className="text-sm whitespace-pre-line">
-            {post.content.length > 300 ? (
+            {postData.content.length > 300 ? (
               <>
-                {post.content.substring(0, 300)}...
-                <Link href={`/posts/${post.id}`} className="text-primary hover:underline ml-1">
+                {postData.content.substring(0, 300)}...
+                <Link href={`/posts/${postData.id}`} className="text-primary hover:underline ml-1">
                   Read more
                 </Link>
               </>
             ) : (
-              post.content
+              postData.content
             )}
           </div>
           
@@ -167,30 +186,32 @@ export function PostCard({ post, showActions = true, onEdit }: PostCardProps) {
               variant="ghost"
               size="sm"
               onClick={handleLike}
-              className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+              disabled={isLiking}
+              className={`flex items-center gap-1 hover:text-foreground ${hasLiked ? 'text-primary' : 'text-muted-foreground'}`}
             >
-              <ThumbsUp className="h-4 w-4" />
-              {post.likeCount > 0 && <span className="text-xs">{post.likeCount}</span>}
+              <ThumbsUp className={`h-4 w-4 ${hasLiked ? "fill-current text-primary" : ""}`} />
+              {postData.likeCount > 0 && <span className="text-xs">{postData.likeCount}</span>}
             </Button>
             
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDislike}
-              className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+              disabled={isDisliking}
+              className={`flex items-center gap-1 hover:text-foreground ${hasDisliked ? "text-destructive" : "text-muted-foreground"}`}
             >
-              <ThumbsDown className="h-4 w-4" />
-              {post.dislikeCount > 0 && <span className="text-xs">{post.dislikeCount}</span>}
+              <ThumbsDown className={`h-4 w-4 ${hasDisliked ? "fill-current text-destructive" : ""}`} />
+              {postData.dislikeCount > 0 && <span className="text-xs">{postData.dislikeCount}</span>}
             </Button>
             
-            <Link href={`/posts/${post.id}#comments`}>
+            <Link href={`/posts/${postData.id}#comments`}>
               <Button
                 variant="ghost"
                 size="sm"
                 className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
               >
                 <MessageSquare className="h-4 w-4" />
-                {post.commentCount > 0 && <span className="text-xs">{post.commentCount}</span>}
+                {postData.commentCount > 0 && <span className="text-xs">{postData.commentCount}</span>}
               </Button>
             </Link>
           </div>
