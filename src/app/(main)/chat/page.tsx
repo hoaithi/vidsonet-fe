@@ -35,6 +35,7 @@ import VideoCallModal from "@/components/video-call/VideoCallModal";
 import IncomingCallNotification from "@/components/video-call/IncomingCallNotification";
 import { ImagePreview } from "@/components/chat-detail/ChatDetailModal";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 // ✅ Image Preview Item Component
 function ImagePreviewItem({
@@ -1051,7 +1052,21 @@ export default function ChatPage() {
         <div className="w-[400px] bg-white border-r flex flex-col min-h-0">
           <div className="p-2 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-2xl font-bold text-gray-900">Tin nhắn</h2>
+              <Link
+                href="/"
+                className="font-bold text-lg md:text-xl flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
+                <img
+                  src="/eclipse-svgrepo-com.svg"
+                  alt="VidsoNet Logo"
+                  className="h-8 w-8 md:h-10 md:w-10"
+                />
+                <span className="hidden sm:inline">VidsoNet</span>
+              </Link>
+
+              {/* <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                Tin nhắn
+              </h2> */}
             </div>
 
             <div className="relative">
@@ -1185,9 +1200,6 @@ export default function ChatPage() {
                       className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center"
                       onClick={() => setIsCallOpen(true)}
                     >
-                      <Phone className="w-5 h-5" />
-                    </button>
-                    <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center">
                       <Video className="w-5 h-5" />
                     </button>
                     <button
@@ -1407,9 +1419,9 @@ export default function ChatPage() {
               {/* Message Input */}
               <div className="p-2 border-t border-gray-200 bg-white flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0 flex items-center justify-center">
+                  {/* <button className="text-blue-600 hover:bg-gray-100 w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0 flex items-center justify-center">
                     <Paperclip className="w-5 h-5" />
-                  </button>
+                  </button> */}
 
                   {/* ✅ Image Upload Button */}
                   <input
@@ -1437,9 +1449,9 @@ export default function ChatPage() {
                       onKeyPress={handleKeyPress}
                       className="bg-gray-100 border-0 text-gray-900 placeholder-gray-500 rounded-full pr-10 focus:ring-2 focus:ring-blue-500 transition-all duration-200 min-h-[40px]"
                     />
-                    <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:bg-gray-200 w-7 h-7 rounded-full transition-all duration-200 flex items-center justify-center">
+                    {/* <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:bg-gray-200 w-7 h-7 rounded-full transition-all duration-200 flex items-center justify-center">
                       <Smile className="w-5 h-5" />
-                    </button>
+                    </button> */}
                   </div>
 
                   <button

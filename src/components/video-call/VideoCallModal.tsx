@@ -122,9 +122,7 @@ export default function VideoCallModal({
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="w-12 h-12 rounded-full text-white/80 hover:bg-white/10 transition-all duration-200 flex items-center justify-center">
-                <Minimize2 className="w-6 h-6" />
-              </button>
+
               <button
                 onClick={
                   callState === "calling"

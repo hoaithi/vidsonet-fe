@@ -1,5 +1,4 @@
-"use client";
-import { useState, useMemo, useEffect } from "react";
+"use client";import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,13 +38,24 @@ import {
 } from "recharts";
 import { DashboardService } from "@/services/dashboard-service";
 import {
+  MembershipMonthlyStatsResponse,
   ResultData,
   ResultDataSubscription,
+  ResultPaymentData,
   TopVideo,
+  VideoMonthlyStatsResponse,
 } from "@/types/dashboard";
 import { useAuthStore } from "@/store/auth-store";
-
+import { PieChart, Pie, Cell, Legend } from "recharts";
+import { DollarSign, Package, TrendingUp } from "lucide-react";
 type SortOption = "views" | "likes" | "date" | "engagement";
+interface DashboardPaymentChartsProps {
+  profileId?: string;
+}
+
+interface DashboardChartsProps {
+  profileId?: string;
+}
 
 interface DashboardVideo {
   id: string;
@@ -166,47 +176,171 @@ function OverviewStatsCards({
 }
 
 // Dashboard Charts Component
-function DashboardCharts({ stats }: { stats: ResultData["stats"] | null }) {
-  const engagementData = stats
-    ? [
-        { metric: "Likes", value: stats.totalLikes },
-        { metric: "Dislikes", value: stats.totalDislikes },
-        { metric: "Comments", value: stats.totalComments },
-        { metric: "Views", value: Math.floor(stats.totalViews / 100) }, // Scale down for better visualization
-      ]
-    : [];
+// function DashboardCharts({ stats }: { stats: ResultData["stats"] | null }) {
+//   const engagementData = stats
+//     ? [
+//         { metric: "Likes", value: stats.totalLikes },
+//         { metric: "Dislikes", value: stats.totalDislikes },
+//         { metric: "Comments", value: stats.totalComments },
+//         { metric: "Views", value: Math.floor(stats.totalViews / 100) }, // Scale down for better visualization
+//       ]
+//     : [];
 
-  // Mock monthly data - you can replace this with real data from your API
-  const viewsData = [
-    { date: "Jan", views: 0 },
-    { date: "Feb", views: 0 },
-    { date: "Mar", views: 0 },
-    { date: "Apr", views: 0 },
-    { date: "May", views: 0 },
-    { date: "Jun", views: stats?.totalViews || 0 },
-  ];
+//   // Mock monthly data - you can replace this with real data from your API
+//   const viewsData = [
+//     { date: "Jan", views: 0 },
+//     { date: "Feb", views: 0 },
+//     { date: "Mar", views: 0 },
+//     { date: "Apr", views: 0 },
+//     { date: "May", views: 0 },
+//     { date: "Jun", views: stats?.totalViews || 0 },
+//   ];
+
+//   return (
+//     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+//       <Card className="bg-white border-gray-200 shadow-sm">
+//         <CardHeader>
+//           <CardTitle className="text-gray-900">Views Over Time</CardTitle>
+//           <CardDescription className="text-gray-600">
+//             Monthly view statistics
+//           </CardDescription>
+//         </CardHeader>
+//         <CardContent>
+//           <ResponsiveContainer width="100%" height={300}>
+//             <LineChart data={viewsData}>
+//               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+//               <XAxis dataKey="date" stroke="#6B7280" />
+//               <YAxis stroke="#6B7280" />
+//               <Tooltip
+//                 contentStyle={{
+//                   backgroundColor: "#fff",
+//                   border: "1px solid #E5E7EB",
+//                 }}
+//                 labelStyle={{ color: "#374151" }}
+//               />
+//               <Line
+//                 type="monotone"
+//                 dataKey="views"
+//                 stroke="#2563EB"
+//                 strokeWidth={3}
+//                 dot={{ fill: "#2563EB", strokeWidth: 2, r: 4 }}
+//               />
+//             </LineChart>
+//           </ResponsiveContainer>
+//         </CardContent>
+//       </Card>
+
+//       <Card className="bg-white border-gray-200 shadow-sm">
+//         <CardHeader>
+//           <CardTitle className="text-gray-900">Engagement Breakdown</CardTitle>
+//           <CardDescription className="text-gray-600">
+//             User interaction metrics
+//           </CardDescription>
+//         </CardHeader>
+//         <CardContent>
+//           <ResponsiveContainer width="100%" height={300}>
+//             <BarChart data={engagementData}>
+//               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+//               <XAxis dataKey="metric" stroke="#6B7280" />
+//               <YAxis stroke="#6B7280" />
+//               <Tooltip
+//                 contentStyle={{
+//                   backgroundColor: "#fff",
+//                   border: "1px solid #E5E7EB",
+//                 }}
+//                 labelStyle={{ color: "#374151" }}
+//               />
+//               <Bar dataKey="value" fill="#2563EB" radius={[4, 4, 0, 0]} />
+//             </BarChart>
+//           </ResponsiveContainer>
+//         </CardContent>
+//       </Card>
+//     </div>
+//   );
+// }
+
+function DashboardCharts({ profileId }: DashboardChartsProps) {
+  const [monthlyData, setMonthlyData] =
+    useState<VideoMonthlyStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMonthlyData = async () => {
+      if (!profileId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await DashboardService.getMonthlyVideoStatsByProfileId(
+          profileId,
+          6
+        );
+
+        console.log("responseresponse", response);
+        if (response?.result) {
+          setMonthlyData(response?.result);
+        }
+      } catch (error) {
+        console.error("Error fetching monthly video data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMonthlyData();
+  }, [profileId]);
+
+  if (loading || !monthlyData) {
+    return <div>Loading charts...</div>;
+  }
+
+  const { monthlyData: months } = monthlyData;
+
+  // Transform data for charts
+  const viewsData = months.map((m) => ({
+    month: m.month,
+    views: m.newViews,
+    totalViews: m.totalViews,
+  }));
+
+  const engagementData = months.map((m) => ({
+    month: m.month,
+    likes: m.newLikes,
+    comments: m.newComments,
+    engagementRate: m.averageEngagementRate,
+  }));
+
+  const videoUploadData = months.map((m) => ({
+    month: m.month,
+    newVideos: m.newVideos,
+    totalVideos: m.totalVideos,
+  }));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Views Over Time - REAL DATA */}
       <Card className="bg-white border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle className="text-gray-900">Views Over Time</CardTitle>
           <CardDescription className="text-gray-600">
-            Monthly view statistics
+            Monthly view statistics (Last 6 months)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={viewsData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis dataKey="date" stroke="#6B7280" />
+              <XAxis dataKey="month" stroke="#6B7280" />
               <YAxis stroke="#6B7280" />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "#fff",
                   border: "1px solid #E5E7EB",
+                  borderRadius: "8px",
                 }}
-                labelStyle={{ color: "#374151" }}
+                labelStyle={{ color: "#374151", fontWeight: "bold" }}
               />
               <Line
                 type="monotone"
@@ -214,34 +348,129 @@ function DashboardCharts({ stats }: { stats: ResultData["stats"] | null }) {
                 stroke="#2563EB"
                 strokeWidth={3}
                 dot={{ fill: "#2563EB", strokeWidth: 2, r: 4 }}
+                name="Monthly Views"
+              />
+              <Line
+                type="monotone"
+                dataKey="totalViews"
+                stroke="#93C5FD"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+                name="Cumulative Views"
               />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
+      {/* Engagement Breakdown - REAL DATA */}
       <Card className="bg-white border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle className="text-gray-900">Engagement Breakdown</CardTitle>
           <CardDescription className="text-gray-600">
-            User interaction metrics
+            User interaction metrics by month
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={engagementData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis dataKey="metric" stroke="#6B7280" />
+              <XAxis dataKey="month" stroke="#6B7280" />
               <YAxis stroke="#6B7280" />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "#fff",
                   border: "1px solid #E5E7EB",
+                  borderRadius: "8px",
                 }}
-                labelStyle={{ color: "#374151" }}
+                labelStyle={{ color: "#374151", fontWeight: "bold" }}
               />
-              <Bar dataKey="value" fill="#2563EB" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="likes"
+                fill="#2563EB"
+                radius={[4, 4, 0, 0]}
+                name="Likes"
+              />
+              <Bar
+                dataKey="comments"
+                fill="#10B981"
+                radius={[4, 4, 0, 0]}
+                name="Comments"
+              />
             </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Video Uploads - REAL DATA */}
+      <Card className="bg-white border-gray-200 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-gray-900">Video Uploads</CardTitle>
+          <CardDescription className="text-gray-600">
+            Monthly upload activity
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={videoUploadData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="month" stroke="#6B7280" />
+              <YAxis stroke="#6B7280" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "8px",
+                }}
+                labelStyle={{ color: "#374151", fontWeight: "bold" }}
+              />
+              <Bar
+                dataKey="newVideos"
+                fill="#8B5CF6"
+                radius={[4, 4, 0, 0]}
+                name="New Videos"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Engagement Rate - REAL DATA */}
+      <Card className="bg-white border-gray-200 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-gray-900">Engagement Rate</CardTitle>
+          <CardDescription className="text-gray-600">
+            (Likes + Comments) / Views × 100
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={engagementData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="month" stroke="#6B7280" />
+              <YAxis stroke="#6B7280" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "8px",
+                }}
+                labelStyle={{ color: "#374151", fontWeight: "bold" }}
+                formatter={(value: number) => [
+                  `${value.toFixed(2)}%`,
+                  "Engagement Rate",
+                ]}
+              />
+              <Line
+                type="monotone"
+                dataKey="engagementRate"
+                stroke="#F59E0B"
+                strokeWidth={3}
+                dot={{ fill: "#F59E0B", strokeWidth: 2, r: 4 }}
+                name="Engagement Rate"
+              />
+            </LineChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
@@ -249,6 +478,376 @@ function DashboardCharts({ stats }: { stats: ResultData["stats"] | null }) {
   );
 }
 
+function DashboardPaymentCharts({ profileId }: DashboardPaymentChartsProps) {
+  const [monthlyData, setMonthlyData] =
+    useState<MembershipMonthlyStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchMonthlyData = async () => {
+      if (!profileId) {
+        setLoading(false);
+        setError("Profile ID is required");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await DashboardService.getMonthlyStatsByProfileId(
+          profileId,
+          6
+        );
+        if (response?.result) {
+          setMonthlyData(response.result);
+        }
+      } catch (error) {
+        console.error("Error fetching monthly data:", error);
+        setError("Failed to load monthly statistics");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMonthlyData();
+  }, [profileId]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading monthly statistics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !profileId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-red-600 font-medium">
+            {error || "Profile ID is required"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // No data state
+  if (!monthlyData) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-gray-600">No data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { monthlyData: months, overallStats } = monthlyData;
+
+  // Transform data for charts
+  const revenueData = months.map((m) => ({
+    month: m.month,
+    revenue: m.revenue,
+    cumulative: m.cumulativeRevenue,
+  }));
+
+  const memberGrowthData = months.map((m) => ({
+    month: m.month,
+    newMembers: m.newMembers,
+    totalMembers: m.totalMembers,
+  }));
+
+  const membershipStatsData = [
+    {
+      name: "Total Tiers",
+      value: overallStats.totalMembershipTiers || 0,
+      fill: "#3B82F6",
+    },
+    {
+      name: "Active Tiers",
+      value: overallStats.activeMembershipTiers || 0,
+      fill: "#10B981",
+    },
+    {
+      name: "Total Members",
+      value: overallStats.totalMembers || 0,
+      fill: "#8B5CF6",
+    },
+  ];
+
+  // Calculate growth potential
+  const currentRevenue = overallStats.channelRevenue || 0;
+  const potentialGrowth = currentRevenue * 0.3;
+  const revenueBreakdown = [
+    { name: "Revenue Earned", value: currentRevenue, fill: "#10B981" },
+    { name: "Potential Growth", value: potentialGrowth, fill: "#93C5FD" },
+  ];
+
+  // Stats cards
+  const statsCards = [
+    {
+      title: "Total Revenue",
+      value: `$${currentRevenue.toFixed(2)}`,
+      icon: DollarSign,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+    },
+    {
+      title: "Total Members",
+      value: overallStats.totalMembers || 0,
+      icon: Users,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+    },
+    {
+      title: "Active Tiers",
+      value: `${overallStats.activeMembershipTiers || 0}/${
+        overallStats.totalMembershipTiers || 0
+      }`,
+      icon: Package,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
+    },
+    {
+      title: "Avg Revenue/Member",
+      value:
+        overallStats.totalMembers && currentRevenue
+          ? `$${(currentRevenue / overallStats.totalMembers).toFixed(2)}`
+          : "$0.00",
+      icon: TrendingUp,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statsCards.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={index} className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">
+                      {stat.title}
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 mt-2">
+                      {stat.value}
+                    </p>
+                  </div>
+                  <div className={`${stat.bgColor} p-3 rounded-lg`}>
+                    <Icon className={`h-6 w-6 ${stat.color}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Monthly Revenue Trend - REAL DATA */}
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-gray-900">Revenue Trend</CardTitle>
+            <CardDescription className="text-gray-600">
+              Monthly revenue from memberships (Last 6 months)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="month" stroke="#6B7280" />
+                <YAxis stroke="#6B7280" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#374151", fontWeight: "bold" }}
+                  formatter={(value: number) => [
+                    `$${value.toFixed(2)}`,
+                    "Revenue",
+                  ]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#10B981"
+                  strokeWidth={3}
+                  dot={{ fill: "#10B981", strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6 }}
+                  name="Monthly Revenue"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="cumulative"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  name="Cumulative"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Membership Statistics */}
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-gray-900">
+              Membership Statistics
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Overview of tiers and members
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={membershipStatsData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" stroke="#6B7280" />
+                <YAxis stroke="#6B7280" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#374151", fontWeight: "bold" }}
+                />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                  {membershipStatsData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Revenue Distribution */}
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-gray-900">Revenue Overview</CardTitle>
+            <CardDescription className="text-gray-600">
+              Current revenue vs growth potential
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={revenueBreakdown}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: $${value.toFixed(2)}`}
+                  outerRadius={100}
+                  dataKey="value"
+                >
+                  {revenueBreakdown.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => `$${value.toFixed(2)}`}
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Member Growth - REAL DATA */}
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-gray-900">Member Growth</CardTitle>
+            <CardDescription className="text-gray-600">
+              New and cumulative members over time
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={memberGrowthData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="month" stroke="#6B7280" />
+                <YAxis stroke="#6B7280" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#374151", fontWeight: "bold" }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="newMembers"
+                  stroke="#F59E0B"
+                  strokeWidth={2}
+                  dot={{ fill: "#F59E0B", strokeWidth: 2, r: 4 }}
+                  name="New Members"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="totalMembers"
+                  stroke="#8B5CF6"
+                  strokeWidth={3}
+                  dot={{ fill: "#8B5CF6", strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6 }}
+                  name="Total Members"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Summary Info */}
+      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                📊 Data Period
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {monthlyData.startDate} to {monthlyData.endDate} (
+                {monthlyData.totalMonths} months)
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Latest Month Revenue</p>
+              <p className="text-2xl font-bold text-blue-600">
+                ${months[months.length - 1]?.revenue.toFixed(2) || "0.00"}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 // Format duration from seconds to MM:SS
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -434,37 +1033,37 @@ function VideosTable({
   );
 }
 
-// Main Dashboard Page Component
+// Main Dashboard Page Component - FIXED VERSION
 export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<SortOption>("views");
-  const [loading, setLoading] = useState(true);
+
+  // Separate loading states for each data fetch
+  const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<ResultData | undefined>(
     undefined
   );
-  const [subscriptionData, setSubscriptionData] = useState<
-    ResultDataSubscription | undefined
-  >(undefined);
 
   const { profile } = useAuthStore();
-
-  // Replace with actual profileId from auth context or props
   const profileId = profile?.id;
 
+  // FIX 1: Move conditional check AFTER all hooks
+  // FIX 2: Single useEffect for dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
-      try {
-        if (!profileId) return;
-        setLoading(true);
+      if (!profileId) {
+        setDashboardLoading(false);
+        return;
+      }
 
-        // Fetch both dashboard stats and subscription data
+      try {
+        setDashboardLoading(true);
         const dashboardResponse =
           await DashboardService.getDashboardByProfileId(profileId);
         setDashboardData(dashboardResponse.result);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        // You can add error handling UI here
       } finally {
-        setLoading(false);
+        setDashboardLoading(false);
       }
     };
 
@@ -514,7 +1113,6 @@ export default function DashboardPage() {
 
   const handleVideoAction = (action: string, videoId: string) => {
     console.log(`Action: ${action}, Video ID: ${videoId}`);
-    // Implement actual actions here
     switch (action) {
       case "watch":
         window.open(`/watch/${videoId}`, "_blank");
@@ -533,13 +1131,26 @@ export default function DashboardPage() {
 
   const handleViewAnalytics = () => {
     console.log("View Analytics clicked");
-    // Navigate to analytics page
   };
 
-  if (loading) {
+  // FIX 3: Better loading/error handling
+  if (!profileId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500 text-lg">Loading dashboard...</div>
+        <div className="text-gray-500 text-lg">
+          Please log in to view dashboard
+        </div>
+      </div>
+    );
+  }
+
+  if (dashboardLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent mb-4"></div>
+          <div className="text-gray-500 text-lg">Loading dashboard...</div>
+        </div>
       </div>
     );
   }
@@ -552,13 +1163,17 @@ export default function DashboardPage() {
           stats={dashboardData?.stats || null}
           subscriberCount={dashboardData?.totalUsers || 0}
         />
-        <DashboardCharts stats={dashboardData?.stats || null} />
+        {/* <DashboardCharts stats={dashboardData?.stats || null} /> */}
+        <DashboardCharts profileId={profileId} />
+        {/* FIX 4: Pass only profileId, component fetches its own data */}
+        <DashboardPaymentCharts profileId={profileId} />
+
         <VideosTable
           videos={sortedVideos}
           sortBy={sortBy}
           onSortChange={handleSortChange}
           onVideoAction={handleVideoAction}
-          loading={loading}
+          loading={dashboardLoading}
         />
       </div>
     </div>

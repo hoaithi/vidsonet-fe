@@ -1,5 +1,4 @@
-"use client";
-import { Button } from "@/components/ui/button";
+"use client";import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
 import { Loader2, MessageCircle } from "lucide-react";
@@ -105,7 +104,7 @@ export function ChannelInfoSection({
           </Link>
 
           <div>
-            <Link href={`/channel/${channel.id}`}>
+            <Link href={`/profile/${channel.id}`}>
               <p className="font-semibold hover:underline">{channel.name}</p>
             </Link>
             <p className="text-sm text-muted-foreground">

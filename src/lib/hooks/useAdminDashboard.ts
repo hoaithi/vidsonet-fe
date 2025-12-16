@@ -1,64 +1,9 @@
-// import { useState, useEffect } from "react";import { ResultData, ProfileListResponse, VideoItem } from "@/types/dashboard";// import { AdminDashboardService } from "@/services/admin-dashboard-service";// export const useAdminDashboard = () => {//   const [dashboardData, setDashboardData] = useState<ResultData | null>(null);//   const [videosData, setVideosData] = useState<VideoItem[] | []>([]);//   const [profilesData, setProfilesData] = useState<ProfileListResponse | null>(
-//     null
-//   );
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-
-//   useEffect(() => {
-//     fetchDashboardData();
-//   }, []);
-
-//   const fetchDashboardData = async () => {
-//     try {
-//       setLoading(true);
-//       setError(null);
-
-//       // Fetch all data in parallel
-//       const [dashboardRes, videosRes, profilesRes] = await Promise.all([
-//         AdminDashboardService.getAdminDashboardOverview(),
-//         AdminDashboardService.getAllVideos(0, 20),
-//         AdminDashboardService.getAllProfiles(0, 20),
-//       ]);
-
-//       // Safely set data with type narrowing
-//       if (dashboardRes.result) {
-//         setDashboardData(dashboardRes.result);
-//       }
-
-//       if (videosRes.result) {
-//         setVideosData(videosRes.result?.content);
-//       }
-
-//       if (profilesRes.result) {
-//         setProfilesData(profilesRes.result);
-//       }
-//     } catch (err: any) {
-//       setError(err.message || "Failed to fetch dashboard data");
-//       console.error("Dashboard fetch error:", err);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const refreshDashboard = () => {
-//     fetchDashboardData();
-//   };
-
-//   return {
-//     dashboardData,
-//     videosData,
-//     profilesData,
-//     loading,
-//     error,
-//     refreshDashboard,
-//   };
-// };
-
 import { useState, useEffect } from "react";
 import {
   ResultData,
   ProfileListResponse,
   VideoListResponse,
+  GrowthDataResponse,
 } from "@/types/dashboard";
 import { AdminDashboardService } from "@/services/admin-dashboard-service";
 
@@ -68,8 +13,10 @@ export const useAdminDashboard = () => {
   const [profilesData, setProfilesData] = useState<ProfileListResponse | null>(
     null
   );
+  const [growthData, setGrowthData] = useState<GrowthDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [growthLoading, setGrowthLoading] = useState(false);
 
   // ✅ Initial fetch - chỉ chạy 1 lần khi mount
   useEffect(() => {
@@ -96,7 +43,7 @@ export const useAdminDashboard = () => {
     };
 
     initialFetch();
-  }, []); // ← Safe vì không có external dependencies
+  }, []);
 
   // ✅ Các hàm fetch riêng biệt để gọi từ component
   const fetchDashboardData = async () => {
@@ -176,6 +123,35 @@ export const useAdminDashboard = () => {
     }
   };
 
+  // ✅ NEW: Fetch growth data với filters
+  const fetchGrowthData = async (
+    timeRange: string = "week",
+    comparisonType: string = "previous",
+    customStartDate?: string,
+    customEndDate?: string
+  ) => {
+    try {
+      setGrowthLoading(true);
+      setError(null);
+
+      const growthRes = await AdminDashboardService.getGrowthData(
+        timeRange,
+        comparisonType,
+        customStartDate,
+        customEndDate
+      );
+
+      if (growthRes.result) {
+        setGrowthData(growthRes.result);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch growth data");
+      console.error("Growth data fetch error:", err);
+    } finally {
+      setGrowthLoading(false);
+    }
+  };
+
   const refreshDashboard = () => {
     fetchDashboardData();
   };
@@ -184,10 +160,13 @@ export const useAdminDashboard = () => {
     dashboardData,
     videosData,
     profilesData,
+    growthData,
     loading,
+    growthLoading,
     error,
     fetchProfiles,
     fetchVideos,
+    fetchGrowthData,
     refreshDashboard,
   };
 };
