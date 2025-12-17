@@ -208,3 +208,43 @@ export interface GrowthDataResponse {
   startDate: string;
   endDate: string;
 }
+
+
+// Thêm vào types/dashboard.ts
+
+export interface GrowthDataPoint {
+  period: string;
+  date: string;
+  newUsers: number;
+  activeUsers: number;
+  newVideos: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  engagementRate: number;
+}
+
+export interface GrowthSummary {
+  totalNewUsers: number;
+  totalActiveUsers: number;
+  totalNewVideos: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  userGrowthRate: number;
+  videoGrowthRate: number;
+  viewGrowthRate: number;
+  engagementGrowthRate: number;
+  startDate: string;
+  endDate: string;
+  comparisonStartDate: string;
+  comparisonEndDate: string;
+}
+
+export interface GrowthDataResponse {
+  currentPeriod: GrowthDataPoint[];
+  comparisonPeriod: GrowthDataPoint[];
+  summary: GrowthSummary;
+  timeRange: string;
+  comparisonType: string;
+}
