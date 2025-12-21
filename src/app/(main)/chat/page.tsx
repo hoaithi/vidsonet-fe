@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 import {
-  Paperclip,
   Phone,
   Search,
   Send,
@@ -894,62 +893,6 @@ export default function ChatPage() {
       conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  // const handleSendMessage = async () => {
-  //   if (
-  //     !newMessage.trim() ||
-  //     !activeConversation ||
-  //     !socket ||
-  //     !profile?.id ||
-  //     selectedImages.length === 0
-  //   )
-  //     return;
-
-  //   console.log("📤 Sending message:", newMessage);
-  //   const tempId = `temp-${Date.now()}-${Math.random()}`;
-  //   const messageText = newMessage;
-  //   setNewMessage("");
-
-  //   const optimisticMessage: Message = {
-  //     id: tempId,
-  //     tempId,
-  //     text: messageText,
-  //     sender: "user",
-  //     timestamp: new Date().toLocaleTimeString("vi-VN", {
-  //       hour: "2-digit",
-  //       minute: "2-digit",
-  //     }),
-  //     createdAt: new Date().toISOString(),
-  //     status: "sending",
-  //   };
-
-  //   setListMessagesConversation((prev) => [...prev, optimisticMessage]);
-
-  //   setTimeout(() => scrollToBottom(), 100);
-
-  //   socket.emit("sendMessage", {
-  //     senderId: profile.id,
-  //     receiverId: activeConversation.receiverId,
-  //     content: messageText,
-  //     conversationId: activeConversation.id,
-  //     tempId,
-  //   });
-
-  //   setListConversation((prev) =>
-  //     prev.map((conv) =>
-  //       conv.id === activeConversation.id
-  //         ? {
-  //             ...conv,
-  //             lastMessage: messageText,
-  //             timestamp: new Date().toLocaleTimeString("vi-VN", {
-  //               hour: "2-digit",
-  //               minute: "2-digit",
-  //             }),
-  //           }
-  //         : conv
-  //     )
-  //   );
-  // };
 
   const handleSendMessage = async () => {
     if (!activeConversation || !socket || !profile?.id) return;

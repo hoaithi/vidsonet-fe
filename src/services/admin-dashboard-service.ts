@@ -1,47 +1,3 @@
-// import {  ResultData,//   ProfileListResponse,
-//   VideoItem,
-//   VideoListResponse,
-// } from "@/types/dashboard";
-// import apiClient, { ApiResponse } from "./api-client";
-
-// export const AdminDashboardService = {
-//   // Get admin dashboard overview
-//   getAdminDashboardOverview: async (): Promise<ApiResponse<ResultData>> => {
-//     const response = await apiClient.get<ApiResponse<ResultData>>(
-//       `/video/admin/dashboard`
-//     );
-//     return response.data;
-//   },
-
-//   // Get all videos with pagination
-//   getAllVideos: async (
-//     page: number = 0,
-//     size: number = 20
-//   ): Promise<ApiResponse<VideoListResponse>> => {
-//     const response = await apiClient.get<ApiResponse<VideoListResponse>>(
-//       `/video/all`,
-//       {
-//         params: { page, size },
-//       }
-//     );
-//     return response.data;
-//   },
-
-//   // Get all profiles/users with pagination
-//   getAllProfiles: async (
-//     page: number = 0,
-//     size: number = 20
-//   ): Promise<ApiResponse<ProfileListResponse>> => {
-//     const response = await apiClient.get<ApiResponse<ProfileListResponse>>(
-//       `/profile/admin/all`,
-//       {
-//         params: { page, size },
-//       }
-//     );
-//     return response.data;
-//   },
-// };
-
 import {
   ResultData,
   ProfileListResponse,
@@ -141,6 +97,22 @@ export const AdminDashboardService = {
       `video/admin/growth-data?${params.toString()}`
     );
 
+    return response.data;
+  },
+
+    // Delete a video by ID
+  deleteVideo: async (videoId: string): Promise<ApiResponse<void>> => {
+    const response = await apiClient.delete<ApiResponse<void>>(
+      `/video/${videoId}`
+    );
+    return response.data;
+  },
+
+  // Delete a user/profile by ID
+  deleteProfile: async (profileId: string): Promise<ApiResponse<void>> => {
+    const response = await apiClient.delete<ApiResponse<void>>(
+      `/profile/${profileId}`
+    );
     return response.data;
   },
 
