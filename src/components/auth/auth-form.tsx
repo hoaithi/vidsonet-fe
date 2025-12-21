@@ -150,6 +150,11 @@ function LoginForm({
             Sign up
           </Link>
         </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          <Link href="/forget-password" className="text-primary hover:underline">
+            Forgot password?
+          </Link>
+        </p>
       </div>
     </div>
   );
