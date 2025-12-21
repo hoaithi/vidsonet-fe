@@ -32,7 +32,7 @@ export  function VideoInfoActions({
 
         <Button variant="outline" size="sm" onClick={onDislike} className="flex items-center gap-1">
           <ThumbsDown className={`h-4 w-4 ${userReaction.hasDisliked ? "fill-current text-destructive" : ""}`} />
-          {video.dislikeCount > 0 && <span>{video.dislikeCount}</span>}
+          {video.dislikeCount > 0 && <span>{video.dislikeCount}</span>} 
         </Button>
 
         <Button variant="outline" size="sm" onClick={onWatchLater} className="flex items-center gap-1">
