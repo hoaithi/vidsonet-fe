@@ -109,6 +109,7 @@ export interface ProfileItem {
   subscriberCount: number;
   subscribingCount: number;
   totalViews: number | null;
+  totalVideos: number;
   status: "active" | "suspended" | "deleted";
 }
 

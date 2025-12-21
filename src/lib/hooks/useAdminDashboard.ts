@@ -168,5 +168,6 @@ export const useAdminDashboard = () => {
     fetchVideos,
     fetchGrowthData,
     refreshDashboard,
+    fetchDashboardData
   };
 };

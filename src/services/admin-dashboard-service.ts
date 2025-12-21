@@ -100,4 +100,20 @@ export const AdminDashboardService = {
     return response.data;
   },
 
+    // Delete a video by ID
+  deleteVideo: async (videoId: string): Promise<ApiResponse<void>> => {
+    const response = await apiClient.delete<ApiResponse<void>>(
+      `/video/${videoId}`
+    );
+    return response.data;
+  },
+
+  // Delete a user/profile by ID
+  deleteProfile: async (profileId: string): Promise<ApiResponse<void>> => {
+    const response = await apiClient.delete<ApiResponse<void>>(
+      `/profile/${profileId}`
+    );
+    return response.data;
+  },
+
 };
