@@ -63,7 +63,7 @@ export const VideoService = {
 
   // Delete video
   deleteVideo: async (id: string): Promise<ApiResponse<void>> => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/videos/${id}`);
+    const response = await apiClient.delete<ApiResponse<void>>(`/video/${id}`);
     return response.data;
   },
 
@@ -147,7 +147,7 @@ export const VideoService = {
   ): Promise<ApiResponse<Video>> => {
     const params = userId ? { userId } : undefined;
     const response = await apiClient.post<ApiResponse<Video>>(
-      `/videos/${id}/view`,
+      `/video/${id}/view`,
       null,
       { params }
     );

@@ -48,20 +48,20 @@ export default function ExplorePage() {
   const [hasMore, setHasMore] = useState(true);
 
   // Fetch categories on mount
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await CategoryService.getAllCategories();
-        if (response.result) {
-          setCategories(response.result);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchCategories = async () => {
+  //     try {
+  //       const response = await CategoryService.getAllCategories();
+  //       if (response.result) {
+  //         setCategories(response.result);
+  //       }
+  //     } catch (error) {
+  //       console.error('Error fetching categories:', error);
+  //     }
+  //   };
     
-    fetchCategories();
-  }, []);
+  //   fetchCategories();
+  // }, []);
 
   // Initial search based on URL params
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function ExplorePage() {
         keyword: searchQuery || undefined,
         categoryId: selectedCategory ? parseInt(selectedCategory) : undefined,
         isPremium: isPremium,
-      }, page, 3, sortBy, sortDir);
+      }, page, 6, sortBy, sortDir); // Changed limit from 3 to 10
       
       if (response.result) {
         let newVideos = response.result.content;
@@ -115,7 +115,13 @@ export default function ExplorePage() {
           setVideos(newVideos);
           setCurrentPage(0);
         } else {
-          setVideos(prev => [...prev, ...newVideos]);
+          setVideos(prev => {
+            const uniqueVideos = [...prev, ...newVideos].filter(
+              (video, index, self) =>
+                index === self.findIndex(v => v.id === video.id)
+            );
+            return uniqueVideos;
+          });
           setCurrentPage(page + 1);
         }
         

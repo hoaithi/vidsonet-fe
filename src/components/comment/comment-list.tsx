@@ -86,7 +86,14 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
   const onReplySubmit = async (values: z.infer<typeof commentSchema>) => {
     if (!isAuthenticated || replyingTo === null) return;
 
-    await commentHook.replyToComment(String(replyingTo), values.content);
+    const replyData: CommentCreateRequest = {
+      content: values.content,
+      itemId: targetId,
+      parentId: String(replyingTo),
+      commentType,
+    };
+
+    await commentHook.replyToComment(String(replyingTo), replyData);
     replyForm.reset();
     setReplyingTo(null);
   };

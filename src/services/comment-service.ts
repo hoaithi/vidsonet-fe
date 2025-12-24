@@ -29,10 +29,10 @@ export const CommentService = {
   },
 
   // Reply to comment
-  replyToComment: async (id: string, content: string): Promise<ApiResponse<Comment>> => {
+  replyToComment: async (id: string, data: CommentCreateRequest): Promise<ApiResponse<Comment>> => {
     const response = await apiClient.post<ApiResponse<Comment>>(
       `/comment/${id}/replies`,
-      { content }
+      data
     );
     return response.data;
   },
