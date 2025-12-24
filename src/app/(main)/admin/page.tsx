@@ -107,7 +107,7 @@ interface User {
   avatar: string;
   verificationStatus: string;
 }
-// ===================== ADMIN OVERVIEW PAGE =====================
+// =====================  OVERVIEW PAGE =====================
 function AdminOverviewPage() {
   const [metrics] = useState({
     totalUsers: "45,231",

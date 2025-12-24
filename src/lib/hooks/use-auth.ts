@@ -12,41 +12,55 @@ export const useAuth = () => {
   const { setAuth, logout } = useAuthStore();
   const router = useRouter();
 
-  // Login handler
-  const login = async (data: LoginRequest) => {
-   
+// Login handler
+const login = async (data: LoginRequest) => {
+  console.log('datadatadatadata', data);
+
+  setIsLoading(true);
   
-    setIsLoading(true);
+  try {
+    const response = await AuthService.login(data);
+    console.log("response", response);
     
-    try {
-      const response = await AuthService.login(data);
-      console.log("response", response);
-      if (response.result) {
-        setLocalStorage('accessToken', (response.result.accessToken));
-        setLocalStorage('refreshToken', (response.result.refreshToken));
-        // Get user data
-        const userResponse = await UserService.getCurrentUser();
+    if (response.result) {
+      setLocalStorage('accessToken', response.result.accessToken);
+      setLocalStorage('refreshToken', response.result.refreshToken);
+      
+      // Get user data
+      const userResponse = await UserService.getCurrentUser();
+      
+      if (userResponse.result) {
+        // Save auth data and user info
+        setAuth(response.result, userResponse.result);
         
-        if (userResponse.result) {
-          // Save auth data and user info
-          setAuth(response.result, userResponse.result);
-          
-          toast.success('Logged in successfully');
+        toast.success('Logged in successfully');
+        
+        // Check admin SAU KHI đã setAuth
+        const isAdmin = response.result.user?.roles?.some(role => 
+          role.name === 'ADMIN' || role.name === 'ROLE_ADMIN'
+        );
+        
+        console.log('isAdmin:', isAdmin);
+        
+        // Redirect dựa trên role
+        if (isAdmin) {
+          window.location.href = '/admin-dashboard';
+        } else {
           router.push('/');
         }
       }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      
-      toast.error(
-        error.response?.data?.message || 
-        'Failed to login. Please check your credentials.'
-      );
-    } finally {
-      setIsLoading(false);
     }
-  };
-
+  } catch (error: any) {
+    console.error('Login error:', error);
+    
+    toast.error(
+      error.response?.data?.message || 
+      'Failed to login. Please check your credentials.'
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
   // Register handler
   const register = async (data: RegisterRequest) => {
     setIsLoading(true);
