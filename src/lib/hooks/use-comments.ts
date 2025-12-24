@@ -76,12 +76,12 @@ export const useComments = (itemId?: string, commentType: 'VIDEO' | 'POST' = 'VI
   };
 
   // Reply to comment
-  const replyToComment = async (commentId: string, content: string) => {
+  const replyToComment = async (commentId: string, data: CommentCreateRequest) => {
     setIsLoading(true);
-    
+
     try {
-      const response = await CommentService.replyToComment(commentId, content);
-      
+      const response = await CommentService.replyToComment(commentId, data);
+
       if (response.result) {
         // Update comments list by adding reply to the parent comment
         setComments((prev) => 
@@ -98,12 +98,12 @@ export const useComments = (itemId?: string, commentType: 'VIDEO' | 'POST' = 'VI
           })
         );
       }
-      
+
       toast.success('Reply added successfully');
       return response.result;
     } catch (error: any) {
       console.error('Reply to comment error:', error);
-      
+
       toast.error(
         error.response?.data?.message || 
         'Failed to add reply. Please try again.'

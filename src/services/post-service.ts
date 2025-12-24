@@ -5,28 +5,20 @@ import { PaginatedResponse } from "@/types/api";
 export const PostService = {
   // Create a new post
   createPost: async (data: PostCreateRequest): Promise<ApiResponse<Post>> => {
-    // If an image file provided, use multipart/form-data
+    const formData = new FormData();
+    if (data.title) formData.append("title", data.title);
+    if (data.content) formData.append("content", data.content);
     if (data.imageFile) {
-      const formData = new FormData();
-      if (data.title) formData.append("title", data.title);
-      if (data.content) formData.append("content", data.content);
       formData.append("image", data.imageFile);
-
-      const response = await apiClient.post<ApiResponse<Post>>(
-        "/post",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-      return response.data;
     }
 
-    // Fallback JSON payload when no image
-    const response = await apiClient.post<ApiResponse<Post>>("/post", {
-      title: data.title,
-      content: data.content ?? "",
-    });
+    const response = await apiClient.post<ApiResponse<Post>>(
+      "/post",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
     return response.data;
   },
 
