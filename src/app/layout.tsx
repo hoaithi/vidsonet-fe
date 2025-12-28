@@ -23,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="mdl-js">
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <SocketProvider>
           {children}
           <Toaster position="top-center" />

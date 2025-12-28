@@ -25,13 +25,23 @@ export  function VideoInfoActions({
       </div>
 
       <div className="flex flex-wrap gap-2 mt-4">
-        <Button variant="outline" size="sm" onClick={onLike} className="flex items-center gap-1">
+        <Button 
+          variant={userReaction.hasLiked ? "default" : "outline"} 
+          size="sm" 
+          onClick={onLike} 
+          className={`flex items-center gap-1 ${userReaction.hasLiked ? "bg-primary text-white" : ""}`}
+        >
           <ThumbsUp className={`h-4 w-4 ${userReaction.hasLiked ? "fill-current" : ""}`} />
           {video.likeCount > 0 && <span>{video.likeCount}</span>}
         </Button>
 
-        <Button variant="outline" size="sm" onClick={onDislike} className="flex items-center gap-1">
-          <ThumbsDown className={`h-4 w-4 ${userReaction.hasDisliked ? "fill-current text-destructive" : ""}`} />
+        <Button 
+          variant={userReaction.hasDisliked ? "destructive" : "outline"} 
+          size="sm" 
+          onClick={onDislike} 
+          className={`flex items-center gap-1 ${userReaction.hasDisliked ? "bg-destructive text-white" : ""}`}
+        >
+          <ThumbsDown className={`h-4 w-4 ${userReaction.hasDisliked ? "fill-current" : ""}`} />
           {video.dislikeCount > 0 && <span>{video.dislikeCount}</span>} 
         </Button>
 

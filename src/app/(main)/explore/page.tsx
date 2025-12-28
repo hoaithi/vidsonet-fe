@@ -88,7 +88,7 @@ export default function ExplorePage() {
         keyword: searchQuery || undefined,
         categoryId: selectedCategory ? parseInt(selectedCategory) : undefined,
         isPremium: isPremium,
-      }, page, 6, sortBy, sortDir); // Changed limit from 3 to 10
+      }, page, 3, sortBy, sortDir); // Changed limit from 3 to 10
       
       if (response.result) {
         let newVideos = response.result.content;
