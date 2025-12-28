@@ -19,7 +19,7 @@ import {
 
 import { useAuthStore } from '@/store/auth-store';
 import { useComments } from '@/lib/hooks/use-comments';
-import { Comment as GenericComment } from '@/types/video';
+import { CommentCreateRequest, Comment as GenericComment } from '@/types/video';
 import { commentSchema } from '@/lib/validation';
 import { getRelativeTime } from '@/lib/utils';
 
@@ -228,14 +228,14 @@ export default function CommentList({ targetId, commentType, isOwner = false }: 
                     <DropdownMenuItem onClick={() => handleDeleteComment(comment.id)}>Delete</DropdownMenuItem>
                   )}
 
-                  {canPin && (
+                  {/* {canPin && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => togglePin(comment.id, pinned)}>
                         {pinned ? 'Unpin' : 'Pin'}
                       </DropdownMenuItem>
                     </>
-                  )}
+                  )} */}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

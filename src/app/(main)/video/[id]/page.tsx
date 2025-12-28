@@ -164,6 +164,21 @@ export default function VideoDetailPage() {
     }
   }, [videoId, isAuthenticated, profile]);
 
+  // Fetch user reaction state
+  useEffect(() => {
+    const fetchUserReaction = async () => {
+      if (isAuthenticated && profile) {
+        try {
+          await checkUserReaction(videoId);
+        } catch (error) {
+          console.error("Error fetching user reaction:", error);
+        }
+      }
+    };
+
+    fetchUserReaction();
+  }, [videoId, isAuthenticated, profile]);
+
   // Handle progress update
   const handleProgressUpdate = async (progress: VideoProgressUpdateRequest) => {
     if (!isAuthenticated || !video) return;
