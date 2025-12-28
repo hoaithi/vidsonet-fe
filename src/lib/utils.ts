@@ -117,3 +117,18 @@ export function formatDuration(seconds: number): string {
 
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
+
+
+export function removeVietnameseAccents(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+}
+
+export function normalizeSearchText(text: string): string {
+  return removeVietnameseAccents(text)
+    .toLowerCase()
+    .trim();
+}

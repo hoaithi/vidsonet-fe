@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -50,6 +50,7 @@ export default function VideoDetailPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
 
+  const hasCalledApi = useRef(false);
   // Thêm hàm để lấy hoặc tạo conversation
   const getOrCreateConversation = async (channelOwnerId: string) => {
     if (!isAuthenticated || !profile || !video) return null;
@@ -83,6 +84,8 @@ export default function VideoDetailPage() {
 
   // Fetch video data
   useEffect(() => {
+    if (hasCalledApi.current) return;
+    hasCalledApi.current = true;
     const fetchVideo = async () => {
       setIsLoading(true);
 
@@ -124,16 +127,17 @@ export default function VideoDetailPage() {
               videoData.profileId.toString(),
               0,
               6,
-              'publishedAt',
-              'desc'
+              "publishedAt",
+              "desc"
             );
             if (relatedRes.result) {
-              const items = relatedRes.result.content
-                .filter((v) => v.id !== videoId);
+              const items = relatedRes.result.content.filter(
+                (v) => v.id !== videoId
+              );
               setRelatedVideos(items);
             }
           } catch (err) {
-            console.error('Failed to load related videos:', err);
+            console.error("Failed to load related videos:", err);
           }
         }
       } catch (error: any) {
