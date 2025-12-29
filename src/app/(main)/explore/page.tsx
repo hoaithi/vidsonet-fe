@@ -381,7 +381,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 import VideoGrid from "@/components/video/video-grid";
-import { CategoryService } from "@/services/category-service";
+
 import { VideoService } from "@/services/video-service";
 import { Video, Category } from "@/types/video";
 import { VideoSearchBar } from "@/components/search/VideoSearchBar";

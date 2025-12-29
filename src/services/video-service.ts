@@ -45,11 +45,22 @@ export const VideoService = {
   },
 
   // Get video by ID
-  getVideoById: async (id: string): Promise<ApiResponse<Video>> => {
-    const response = await apiClient.get<ApiResponse<Video>>(
-      `/video/watch/${id}`
-    );
-    return response.data;
+getVideoById: async (id: string): Promise<ApiResponse<Video>> => {
+    try {
+      const response = await apiClient.get<ApiResponse<Video>>(
+        `/video/watch/${id}`
+      );
+      return response.data;
+    } catch (error: any) {
+      // Handle 402 Payment Required specifically
+      if (error.response?.status === 402) {
+        return {
+          code: 402,
+          message: 'This is a premium video. Please upgrade to watch.',
+        };
+      }
+      throw error;
+    }
   },
 
   // Update video

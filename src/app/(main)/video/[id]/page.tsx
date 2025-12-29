@@ -305,17 +305,6 @@ export default function VideoDetailPage() {
     }
   };
 
-  // Handle premium dialog actions
-  const handleViewMembership = () => {
-    setShowPremiumDialog(false);
-    router.push(`/channel/${premiumChannelId}?tab=membership`);
-  };
-
-  const handleGoBack = () => {
-    setShowPremiumDialog(false);
-    router.back();
-  };
-
   // Render loading state
   if (isLoading) {
     return (
@@ -337,33 +326,61 @@ export default function VideoDetailPage() {
     );
   }
 
-  // Show premium dialog if it's premium content and user doesn't have access
-  if (showPremiumDialog) {
-    return (
-      <div>
-        <PremiumContentDialog
-          open={showPremiumDialog}
-          onOpenChange={setShowPremiumDialog}
-          channelId={premiumChannelId}
-          onViewMembership={handleViewMembership}
-          onGoBack={handleGoBack}
-        />
-      </div>
-    );
-  }
-
-  // Render error state if no video and not premium content
+  // Render error state if no video
+  // Render error / locked video state
+  // Render error / locked video state
   if (!video) {
     return (
-      <div className="py-12 text-center">
-        <h2 className="text-2xl font-bold mb-4">Video Not Found</h2>
-        <p className="text-muted-foreground mb-6">
-          The video you're looking for might have been removed or is
-          unavailable.
-        </p>
-        <Button asChild variant="default">
-          <Link href="/">Go Back Home</Link>
-        </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          {/* Video Player Placeholder */}
+          <div className="relative w-full aspect-video rounded-lg bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center">
+            <div className="text-center space-y-6 p-8">
+              <div className="inline-flex p-5 rounded-full bg-yellow-500/10">
+                <svg
+                  className="h-12 w-12 text-yellow-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </div>
+
+              <div className="space-y-3">
+                <h1 className="text-2xl font-bold text-white">
+                  Nội dung dành cho Thành viên
+                </h1>
+                <p className="text-slate-400 text-sm max-w-md">
+                  Video này chỉ khả dụng với người dùng có gói{" "}
+                  <span className="text-yellow-400 font-medium">
+                    Membership
+                  </span>
+                </p>
+              </div>
+
+              <Button
+                asChild
+                variant="ghost"
+                className="text-slate-400 hover:text-white"
+              >
+                <Link href="/">← Quay lại trang chủ</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="font-medium">Related Videos</h3>
+          <p className="text-sm text-muted-foreground">
+            No related videos available
+          </p>
+        </div>
       </div>
     );
   }

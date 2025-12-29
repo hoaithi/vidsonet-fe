@@ -534,6 +534,646 @@
 
 // export default VideoPlayer;
 
+// "use client";
+
+// import { useRef, useState, useEffect } from "react";
+// import {
+//   Play,
+//   Pause,
+//   Volume2,
+//   VolumeX,
+//   Maximize,
+//   SkipForward,
+//   Settings,
+//   Loader,
+// } from "lucide-react";
+// import { Slider } from "@/components/ui/slider";
+// import { formatTime } from "@/lib/utils";
+// import { VideoProgressUpdateRequest } from "@/types/video";
+// import { VideoService } from "@/services/video-service";
+
+// interface VideoPlayerProps {
+//   videoUrl: string;
+//   videoId: string;
+//   onProgressUpdate?: (progress: VideoProgressUpdateRequest) => void;
+//   initialProgress?: number;
+//   autoPlay?: boolean;
+// }
+
+// // 🎯 Helper function
+// function generateSessionId(): string {
+//   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+// }
+
+// export function VideoPlayer({
+//   videoUrl,
+//   videoId,
+//   onProgressUpdate,
+//   initialProgress = 0,
+//   autoPlay = false,
+// }: VideoPlayerProps) {
+//   const videoRef = useRef<HTMLVideoElement>(null);
+//   const containerRef = useRef<HTMLDivElement>(null);
+//   const [isPlaying, setIsPlaying] = useState(false);
+//   const [currentTime, setCurrentTime] = useState(0);
+//   const [duration, setDuration] = useState(0);
+//   const [volume, setVolume] = useState(1);
+//   const [isMuted, setIsMuted] = useState(false);
+//   const [isFullscreen, setIsFullscreen] = useState(false);
+//   const [showControls, setShowControls] = useState(true);
+//   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+//   const lastMouseMoveRef = useRef<number>(0);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [isBuffering, setIsBuffering] = useState(false);
+//   const [playbackRate, setPlaybackRate] = useState(1);
+//   const [hasCompleted, setHasCompleted] = useState(false);
+//   const lastTimeRef = useRef(0);
+
+//   // 🎯 VIEW TRACKING STATE - Use useRef instead of useState to avoid dependency issues
+//   const viewTrackingRef = useRef({
+//     sessionId: generateSessionId(),
+//     actualWatchTime: 0,
+//     lastCheckTime: 0,
+//     hasInteracted: false,
+//     isValidView: false,
+//     lastReportedProgress: 0,
+//   });
+
+//   // For UI display only
+//   const [displayWatchTime, setDisplayWatchTime] = useState(0);
+//   const [displayIsValidView, setDisplayIsValidView] = useState(false);
+
+//   console.log(
+//     "🎬 VideoPlayer mounted - Session ID:",
+//     viewTrackingRef.current.sessionId
+//   );
+
+//   // 🎯 EXPOSE handleInteraction globally
+//   useEffect(() => {
+//     const handleInteraction = () => {
+//       if (viewTrackingRef.current.isValidView) {
+//         console.log("✅ Valid view already counted");
+//         return;
+//       }
+
+//       console.log("🎯 User interacted - counting valid view immediately");
+
+//       VideoService.markInteraction(videoId, viewTrackingRef.current.sessionId)
+//         .then(() => {
+//           console.log("✅ Interaction marked, valid view counted");
+//           viewTrackingRef.current.hasInteracted = true;
+//           viewTrackingRef.current.isValidView = true;
+//           setDisplayIsValidView(true);
+//         })
+//         .catch((error) => {
+//           console.error("❌ Error marking interaction:", error);
+//         });
+//     };
+
+//     (window as any).__videoPlayerInteraction = handleInteraction;
+//     console.log("✅ Interaction handler exposed globally");
+
+//     return () => {
+//       delete (window as any).__videoPlayerInteraction;
+//     };
+//   }, [videoId]);
+
+//   // 🎯 Track ACTUAL watch time (only when video is playing)
+//   useEffect(() => {
+//     const interval = setInterval(() => {
+//       const video = videoRef.current;
+//       if (!video || video.paused || !duration) return;
+
+//       // ✅ Direct mutation - no re-render
+//       viewTrackingRef.current.actualWatchTime += 1;
+//       viewTrackingRef.current.lastCheckTime = video.currentTime;
+
+//       // Update display
+//       setDisplayWatchTime(viewTrackingRef.current.actualWatchTime);
+//     }, 1000);
+
+//     return () => clearInterval(interval);
+//   }, [duration]);
+
+//   // 🎯 VIEW TRACKING LOGIC - Report every 5 seconds
+//   useEffect(() => {
+//     console.log("🔄 Starting view tracking interval");
+
+//     const interval = setInterval(() => {
+//       const video = videoRef.current;
+//       if (!video || video.paused || !duration) return;
+
+//       const tracking = viewTrackingRef.current;
+//       const watchPercentage = (video.currentTime / duration) * 100;
+//       const minWatchTime = Math.min(30, duration * 0.3);
+
+//       // ✅ FIX: ONLY check actualWatchTime (remove percentage check to prevent skip abuse)
+//       const isValid = tracking.actualWatchTime >= minWatchTime;
+
+//       console.log(
+//         `⏱️ Actual watch time: ${tracking.actualWatchTime.toFixed(
+//           1
+//         )}s / ${duration.toFixed(
+//           1
+//         )}s (current position: ${watchPercentage.toFixed(1)}%)`
+//       );
+
+//       // 🎯 Record valid view when threshold is reached
+//       if (isValid && !tracking.isValidView) {
+//         console.log("✅ Valid view threshold reached!");
+
+//         VideoService.recordValidView(videoId, {
+//           sessionId: tracking.sessionId,
+//           watchDuration: tracking.actualWatchTime,
+//           watchPercentage: watchPercentage,
+//           hasInteracted: tracking.hasInteracted,
+//         })
+//           .then(() => {
+//             console.log("✅ Valid view recorded successfully");
+//             viewTrackingRef.current.isValidView = true;
+//             setDisplayIsValidView(true);
+//           })
+//           .catch((error) => {
+//             console.error("❌ Error recording valid view:", error);
+//           });
+//       }
+
+//       // 📊 Update progress every 10%
+//       const progress = Math.floor(watchPercentage);
+//       if (progress - tracking.lastReportedProgress >= 10) {
+//         console.log(`📊 Progress update: ${progress}%`);
+
+//         VideoService.updateViewProgress(videoId, {
+//           sessionId: tracking.sessionId,
+//           watchDuration: tracking.actualWatchTime,
+//           watchPercentage: progress,
+//         });
+
+//         viewTrackingRef.current.lastReportedProgress = progress;
+//       }
+//     }, 5000);
+
+//     return () => clearInterval(interval);
+//   }, [videoId, duration]); // ✅ Stable dependencies only
+
+//   // Initialize player
+//   useEffect(() => {
+//     const video = videoRef.current;
+//     if (!video) return;
+
+//     video.volume = volume;
+
+//     if (initialProgress && initialProgress > 0) {
+//       video.currentTime = initialProgress;
+//     }
+
+//     const handleLoadedMetadata = () => {
+//       setDuration(video.duration);
+//       setIsLoading(false);
+//       console.log(
+//         "📹 Video loaded - Duration:",
+//         video.duration.toFixed(2) + "s"
+//       );
+
+//       if (autoPlay) {
+//         video
+//           .play()
+//           .then(() => {
+//             setIsPlaying(true);
+//           })
+//           .catch(() => {
+//             setIsPlaying(false);
+//             console.log("Autoplay prevented by browser policy");
+//           });
+//       }
+//     };
+
+//     const handleTimeUpdate = () => {
+//       lastTimeRef.current = video.currentTime;
+//       setCurrentTime(video.currentTime);
+
+//       if (
+//         !hasCompleted &&
+//         video.duration > 0 &&
+//         video.currentTime / video.duration >= 0.9
+//       ) {
+//         setHasCompleted(true);
+//       }
+//     };
+
+//     const handlePlay = () => {
+//       setIsPlaying(true);
+//     };
+
+//     const handlePause = () => {
+//       setIsPlaying(false);
+//       setShowControls(true);
+//     };
+
+//     const handleEnded = () => {
+//       setIsPlaying(false);
+//       setHasCompleted(true);
+
+//       if (onProgressUpdate) {
+//         onProgressUpdate({
+//           currentTime: 0,
+//           duration: Math.floor(video.duration),
+//           isCompleted: true,
+//         });
+//       }
+//     };
+
+//     const handleWaiting = () => {
+//       setIsBuffering(true);
+//     };
+
+//     const handleCanPlay = () => {
+//       setIsBuffering(false);
+//     };
+
+//     video.addEventListener("loadedmetadata", handleLoadedMetadata);
+//     video.addEventListener("timeupdate", handleTimeUpdate);
+//     video.addEventListener("play", handlePlay);
+//     video.addEventListener("pause", handlePause);
+//     video.addEventListener("ended", handleEnded);
+//     video.addEventListener("waiting", handleWaiting);
+//     video.addEventListener("canplay", handleCanPlay);
+
+//     return () => {
+//       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+//       video.removeEventListener("timeupdate", handleTimeUpdate);
+//       video.removeEventListener("play", handlePlay);
+//       video.removeEventListener("pause", handlePause);
+//       video.removeEventListener("ended", handleEnded);
+//       video.removeEventListener("waiting", handleWaiting);
+//       video.removeEventListener("canplay", handleCanPlay);
+//     };
+//   }, [
+//     videoUrl,
+//     initialProgress,
+//     autoPlay,
+//     volume,
+//     hasCompleted,
+//     onProgressUpdate,
+//   ]);
+
+//   // Update progress on unmount
+//   useEffect(() => {
+//     const handleBeforeUnload = () => {
+//       if (videoRef.current && onProgressUpdate && duration > 0) {
+//         const video = videoRef.current;
+//         const lastTime = lastTimeRef.current;
+
+//         if (hasCompleted || lastTime / video.duration >= 0.9) {
+//           onProgressUpdate({
+//             currentTime: 0,
+//             duration: Math.floor(video.duration),
+//             isCompleted: true,
+//           });
+//         } else if (lastTime > 0) {
+//           onProgressUpdate({
+//             currentTime: Math.floor(lastTime),
+//             duration: Math.floor(video.duration),
+//             isCompleted: false,
+//           });
+//         }
+//       }
+//     };
+
+//     window.addEventListener("beforeunload", handleBeforeUnload);
+
+//     return () => {
+//       handleBeforeUnload();
+//       window.removeEventListener("beforeunload", handleBeforeUnload);
+//     };
+//   }, [videoUrl, videoId, onProgressUpdate, duration, hasCompleted]);
+
+//   const togglePlay = () => {
+//     const video = videoRef.current;
+//     if (!video) return;
+
+//     if (isPlaying) {
+//       video.pause();
+//     } else {
+//       video.play().catch((error) => {
+//         console.error("Error playing video:", error);
+//       });
+//     }
+//   };
+
+//   const toggleMute = () => {
+//     const video = videoRef.current;
+//     if (!video) return;
+
+//     video.muted = !isMuted;
+//     setIsMuted(!isMuted);
+//   };
+
+//   const handleVolumeChange = (value: number[]) => {
+//     const newVolume = value[0];
+//     const video = videoRef.current;
+//     if (!video) return;
+
+//     video.volume = newVolume;
+//     setVolume(newVolume);
+
+//     if (newVolume === 0) {
+//       setIsMuted(true);
+//       video.muted = true;
+//     } else if (isMuted) {
+//       setIsMuted(false);
+//       video.muted = false;
+//     }
+//   };
+
+//   const handleSeek = (value: number[]) => {
+//     const newTime = value[0];
+//     const video = videoRef.current;
+//     if (!video) return;
+
+//     video.currentTime = newTime;
+//     setCurrentTime(newTime);
+//   };
+
+//   const toggleFullscreen = () => {
+//     const container = containerRef.current;
+//     if (!container) return;
+
+//     if (!isFullscreen) {
+//       if (container.requestFullscreen) {
+//         container.requestFullscreen();
+//       }
+//     } else {
+//       if (document.exitFullscreen) {
+//         document.exitFullscreen();
+//       }
+//     }
+//   };
+
+//   useEffect(() => {
+//     const handleFullscreenChange = () => {
+//       setIsFullscreen(!!document.fullscreenElement);
+//     };
+
+//     document.addEventListener("fullscreenchange", handleFullscreenChange);
+//     return () => {
+//       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+//     };
+//   }, []);
+
+//   const showControlsTemporarily = () => {
+//     const now = Date.now();
+//     if (now - lastMouseMoveRef.current < 100) {
+//       return;
+//     }
+//     lastMouseMoveRef.current = now;
+
+//     if (!showControls) {
+//       setShowControls(true);
+//     }
+
+//     if (hideControlsTimeoutRef.current) {
+//       clearTimeout(hideControlsTimeoutRef.current);
+//       hideControlsTimeoutRef.current = null;
+//     }
+
+//     hideControlsTimeoutRef.current = setTimeout(() => {
+//       if (isPlaying) {
+//         setShowControls(false);
+//       }
+//     }, 2000);
+//   };
+
+//   useEffect(() => {
+//     const container = containerRef.current;
+//     if (!container) return;
+
+//     const handleMouseMove = () => {
+//       showControlsTemporarily();
+//     };
+
+//     container.addEventListener("mousemove", handleMouseMove);
+//     container.addEventListener("mouseenter", () => {
+//       if (hideControlsTimeoutRef.current) {
+//         clearTimeout(hideControlsTimeoutRef.current);
+//         hideControlsTimeoutRef.current = null;
+//       }
+//       setShowControls(true);
+//     });
+//     container.addEventListener("mouseleave", () => {
+//       if (hideControlsTimeoutRef.current) {
+//         clearTimeout(hideControlsTimeoutRef.current);
+//         hideControlsTimeoutRef.current = null;
+//       }
+//       setShowControls(false);
+//     });
+
+//     return () => {
+//       container.removeEventListener("mousemove", handleMouseMove);
+//     };
+//   }, [isPlaying]);
+
+//   useEffect(() => {
+//     return () => {
+//       if (hideControlsTimeoutRef.current) {
+//         clearTimeout(hideControlsTimeoutRef.current);
+//         hideControlsTimeoutRef.current = null;
+//       }
+//     };
+//   }, []);
+
+//   const skipForward = () => {
+//     const video = videoRef.current;
+//     if (!video) return;
+
+//     video.currentTime = Math.min(video.currentTime + 10, video.duration);
+//   };
+
+//   const changePlaybackRate = () => {
+//     const video = videoRef.current;
+//     if (!video) return;
+
+//     const rates = [1.0, 1.25, 1.5, 1.75, 2.0, 0.5, 0.75];
+//     const currentIndex = rates.indexOf(playbackRate);
+//     const nextIndex = (currentIndex + 1) % rates.length;
+//     const newRate = rates[nextIndex];
+
+//     video.playbackRate = newRate;
+//     setPlaybackRate(newRate);
+//   };
+
+//   const handleVideoClick = (e: React.MouseEvent) => {
+//     e.stopPropagation();
+//     togglePlay();
+//   };
+
+//   return (
+//     <div
+//       ref={containerRef}
+//       className="relative w-full group aspect-video bg-black rounded-lg overflow-hidden"
+//       onMouseMove={showControlsTemporarily}
+//       onClick={handleVideoClick}
+//     >
+//       <video
+//         ref={videoRef}
+//         src={videoUrl}
+//         className="w-full h-full object-contain cursor-pointer"
+//         playsInline
+//         onClick={handleVideoClick}
+//       />
+
+//       {isLoading && (
+//         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+//           <Loader className="w-12 h-12 animate-spin text-primary" />
+//         </div>
+//       )}
+
+//       {isBuffering && !isLoading && (
+//         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+//           <Loader className="w-10 h-10 animate-spin text-primary" />
+//         </div>
+//       )}
+
+//       <div
+//         className={`absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200 ${
+//           showControls
+//             ? "opacity-100 pointer-events-auto"
+//             : "opacity-0 pointer-events-none"
+//         }`}
+//       >
+//         <div className="w-full mb-2 pointer-events-auto">
+//           <Slider
+//             value={[currentTime]}
+//             min={0}
+//             max={duration || 100}
+//             step={0.1}
+//             onValueChange={handleSeek}
+//             className="cursor-pointer"
+//           />
+//         </div>
+
+//         <div className="flex items-center justify-between pointer-events-auto">
+//           <div className="flex items-center gap-2">
+//             <button
+//               onClick={(e) => {
+//                 e.stopPropagation();
+//                 togglePlay();
+//               }}
+//               className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+//             >
+//               {isPlaying ? (
+//                 <Pause className="w-5 h-5 text-white" />
+//               ) : (
+//                 <Play className="w-5 h-5 text-white" />
+//               )}
+//             </button>
+
+//             <button
+//               onClick={(e) => {
+//                 e.stopPropagation();
+//                 skipForward();
+//               }}
+//               className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+//             >
+//               <SkipForward className="w-5 h-5 text-white" />
+//             </button>
+
+//             <div className="flex items-center">
+//               <button
+//                 onClick={(e) => {
+//                   e.stopPropagation();
+//                   toggleMute();
+//                 }}
+//                 className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+//               >
+//                 {isMuted || volume === 0 ? (
+//                   <VolumeX className="w-5 h-5 text-white" />
+//                 ) : (
+//                   <Volume2 className="w-5 h-5 text-white" />
+//                 )}
+//               </button>
+
+//               <div className="w-20 hidden sm:block">
+//                 <Slider
+//                   value={[isMuted ? 0 : volume]}
+//                   min={0}
+//                   max={1}
+//                   step={0.01}
+//                   onValueChange={handleVolumeChange}
+//                   onClick={(e) => e.stopPropagation()}
+//                 />
+//               </div>
+//             </div>
+
+//             <div className="text-white text-xs ml-2">
+//               <span>{formatTime(currentTime)}</span>
+//               <span className="mx-1">/</span>
+//               <span>{formatTime(duration)}</span>
+//             </div>
+
+           
+//             {/* {duration > 0 && (
+//               <div className="ml-4 text-xs">
+//                 {displayIsValidView ? (
+//                   <span className="text-green-400">✅ View Counted</span>
+//                 ) : (
+//                   <span className="text-yellow-400">
+//                     ⏱️{" "}
+//                     {Math.ceil(
+//                       Math.max(
+//                         0,
+//                         Math.min(30, duration * 0.3) - displayWatchTime
+//                       )
+//                     )}
+//                     s more (watched: {displayWatchTime}s)
+//                   </span>
+//                 )}
+//               </div>
+//             )} */}
+//           </div>
+
+//           <div className="flex items-center gap-2">
+//             <button
+//               onClick={(e) => {
+//                 e.stopPropagation();
+//                 changePlaybackRate();
+//               }}
+//               className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+//             >
+//               <span className="text-white text-xs font-medium">
+//                 {playbackRate}x
+//               </span>
+//             </button>
+
+//             <button
+//               onClick={(e) => {
+//                 e.stopPropagation();
+//               }}
+//               className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+//             >
+//               <Settings className="w-5 h-5 text-white" />
+//             </button>
+
+//             <button
+//               onClick={(e) => {
+//                 e.stopPropagation();
+//                 toggleFullscreen();
+//               }}
+//               className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+//             >
+//               <Maximize className="w-5 h-5 text-white" />
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default VideoPlayer;
+
+
+
 "use client";
 
 import { useRef, useState, useEffect } from "react";
@@ -560,6 +1200,15 @@ interface VideoPlayerProps {
   autoPlay?: boolean;
 }
 
+// 🎯 AD CONFIGURATION
+const AD_CONFIG = {
+  enabled: true, // Bật/tắt quảng cáo
+  videoUrl:
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+  skipAfterSeconds: 10, // Phải xem 10 giây mới được skip
+  clickUrl: "/ads", // Link đến landing page
+};
+
 // 🎯 Helper function
 function generateSessionId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -573,7 +1222,9 @@ export function VideoPlayer({
   autoPlay = false,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const adVideoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -589,7 +1240,14 @@ export function VideoPlayer({
   const [hasCompleted, setHasCompleted] = useState(false);
   const lastTimeRef = useRef(0);
 
-  // 🎯 VIEW TRACKING STATE - Use useRef instead of useState to avoid dependency issues
+  // 🎯 NEW: Ad states
+  const [showAdSplash, setShowAdSplash] = useState(AD_CONFIG.enabled); // 🎯 NEW: Splash screen
+  const [adPlaying, setAdPlaying] = useState(false);
+  const [adTime, setAdTime] = useState(0);
+  const [adDuration, setAdDuration] = useState(0);
+  const [canSkipAd, setCanSkipAd] = useState(false);
+
+  // 🎯 VIEW TRACKING STATE
   const viewTrackingRef = useRef({
     sessionId: generateSessionId(),
     actualWatchTime: 0,
@@ -599,7 +1257,6 @@ export function VideoPlayer({
     lastReportedProgress: 0,
   });
 
-  // For UI display only
   const [displayWatchTime, setDisplayWatchTime] = useState(0);
   const [displayIsValidView, setDisplayIsValidView] = useState(false);
 
@@ -607,6 +1264,57 @@ export function VideoPlayer({
     "🎬 VideoPlayer mounted - Session ID:",
     viewTrackingRef.current.sessionId
   );
+
+  // 🎯 NEW: Start ad when user clicks play button
+  const handleStartAd = () => {
+    setShowAdSplash(false);
+
+    const adVideo = adVideoRef.current;
+    if (adVideo) {
+      adVideo.src = AD_CONFIG.videoUrl;
+      adVideo.volume = volume;
+      adVideo.load();
+
+      setAdPlaying(true);
+
+      setTimeout(() => {
+        adVideo.play().catch((err) => {
+          console.error("Ad play failed:", err);
+          // If ad fails, skip to main video
+          skipToMainVideo();
+        });
+      }, 100);
+    }
+  };
+
+  // 🎯 Skip to main video function
+  const skipToMainVideo = () => {
+    const adVideo = adVideoRef.current;
+    if (adVideo) {
+      adVideo.pause();
+      adVideo.currentTime = 0;
+    }
+
+    setAdPlaying(false);
+    setCanSkipAd(false);
+    setAdTime(0);
+
+    // Auto play main video
+    setTimeout(() => {
+      const mainVideo = videoRef.current;
+      if (mainVideo) {
+        mainVideo
+          .play()
+          .catch((err) => console.error("Video play error:", err));
+      }
+    }, 100);
+  };
+
+  // 🎯 Handle skip ad
+  const handleSkipAd = () => {
+    if (!canSkipAd) return;
+    skipToMainVideo();
+  };
 
   // 🎯 EXPOSE handleInteraction globally
   useEffect(() => {
@@ -638,47 +1346,42 @@ export function VideoPlayer({
     };
   }, [videoId]);
 
-  // 🎯 Track ACTUAL watch time (only when video is playing)
+  // 🎯 Track ACTUAL watch time
   useEffect(() => {
     const interval = setInterval(() => {
       const video = videoRef.current;
-      if (!video || video.paused || !duration) return;
+      if (!video || video.paused || !duration || adPlaying || showAdSplash)
+        return;
 
-      // ✅ Direct mutation - no re-render
       viewTrackingRef.current.actualWatchTime += 1;
       viewTrackingRef.current.lastCheckTime = video.currentTime;
-
-      // Update display
       setDisplayWatchTime(viewTrackingRef.current.actualWatchTime);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [duration]);
+  }, [duration, adPlaying, showAdSplash]);
 
-  // 🎯 VIEW TRACKING LOGIC - Report every 5 seconds
+  // 🎯 VIEW TRACKING LOGIC
   useEffect(() => {
     console.log("🔄 Starting view tracking interval");
 
     const interval = setInterval(() => {
       const video = videoRef.current;
-      if (!video || video.paused || !duration) return;
+      if (!video || video.paused || !duration || adPlaying || showAdSplash)
+        return;
 
       const tracking = viewTrackingRef.current;
       const watchPercentage = (video.currentTime / duration) * 100;
       const minWatchTime = Math.min(30, duration * 0.3);
 
-      // ✅ FIX: ONLY check actualWatchTime (remove percentage check to prevent skip abuse)
       const isValid = tracking.actualWatchTime >= minWatchTime;
 
       console.log(
         `⏱️ Actual watch time: ${tracking.actualWatchTime.toFixed(
           1
-        )}s / ${duration.toFixed(
-          1
-        )}s (current position: ${watchPercentage.toFixed(1)}%)`
+        )}s / ${duration.toFixed(1)}s`
       );
 
-      // 🎯 Record valid view when threshold is reached
       if (isValid && !tracking.isValidView) {
         console.log("✅ Valid view threshold reached!");
 
@@ -698,7 +1401,6 @@ export function VideoPlayer({
           });
       }
 
-      // 📊 Update progress every 10%
       const progress = Math.floor(watchPercentage);
       if (progress - tracking.lastReportedProgress >= 10) {
         console.log(`📊 Progress update: ${progress}%`);
@@ -714,9 +1416,9 @@ export function VideoPlayer({
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [videoId, duration]); // ✅ Stable dependencies only
+  }, [videoId, duration, adPlaying, showAdSplash]);
 
-  // Initialize player
+  // 🎯 Initialize main video
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -734,18 +1436,6 @@ export function VideoPlayer({
         "📹 Video loaded - Duration:",
         video.duration.toFixed(2) + "s"
       );
-
-      if (autoPlay) {
-        video
-          .play()
-          .then(() => {
-            setIsPlaying(true);
-          })
-          .catch(() => {
-            setIsPlaying(false);
-            console.log("Autoplay prevented by browser policy");
-          });
-      }
     };
 
     const handleTimeUpdate = () => {
@@ -761,10 +1451,7 @@ export function VideoPlayer({
       }
     };
 
-    const handlePlay = () => {
-      setIsPlaying(true);
-    };
-
+    const handlePlay = () => setIsPlaying(true);
     const handlePause = () => {
       setIsPlaying(false);
       setShowControls(true);
@@ -783,13 +1470,8 @@ export function VideoPlayer({
       }
     };
 
-    const handleWaiting = () => {
-      setIsBuffering(true);
-    };
-
-    const handleCanPlay = () => {
-      setIsBuffering(false);
-    };
+    const handleWaiting = () => setIsBuffering(true);
+    const handleCanPlay = () => setIsBuffering(false);
 
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
     video.addEventListener("timeupdate", handleTimeUpdate);
@@ -808,14 +1490,39 @@ export function VideoPlayer({
       video.removeEventListener("waiting", handleWaiting);
       video.removeEventListener("canplay", handleCanPlay);
     };
-  }, [
-    videoUrl,
-    initialProgress,
-    autoPlay,
-    volume,
-    hasCompleted,
-    onProgressUpdate,
-  ]);
+  }, [videoUrl, initialProgress, volume, hasCompleted, onProgressUpdate]);
+
+  // 🎯 Ad video event listeners
+  useEffect(() => {
+    const adVideo = adVideoRef.current;
+    if (!adVideo) return;
+
+    const handleLoadedMetadata = () => {
+      setAdDuration(adVideo.duration);
+    };
+
+    const handleTimeUpdate = () => {
+      setAdTime(adVideo.currentTime);
+
+      if (adVideo.currentTime >= AD_CONFIG.skipAfterSeconds && !canSkipAd) {
+        setCanSkipAd(true);
+      }
+    };
+
+    const handleEnded = () => {
+      skipToMainVideo();
+    };
+
+    adVideo.addEventListener("loadedmetadata", handleLoadedMetadata);
+    adVideo.addEventListener("timeupdate", handleTimeUpdate);
+    adVideo.addEventListener("ended", handleEnded);
+
+    return () => {
+      adVideo.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      adVideo.removeEventListener("timeupdate", handleTimeUpdate);
+      adVideo.removeEventListener("ended", handleEnded);
+    };
+  }, [canSkipAd]);
 
   // Update progress on unmount
   useEffect(() => {
@@ -848,7 +1555,10 @@ export function VideoPlayer({
     };
   }, [videoUrl, videoId, onProgressUpdate, duration, hasCompleted]);
 
+  // 🎯 Toggle play
   const togglePlay = () => {
+    if (adPlaying || showAdSplash) return;
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -862,7 +1572,7 @@ export function VideoPlayer({
   };
 
   const toggleMute = () => {
-    const video = videoRef.current;
+    const video = adPlaying ? adVideoRef.current : videoRef.current;
     if (!video) return;
 
     video.muted = !isMuted;
@@ -871,7 +1581,7 @@ export function VideoPlayer({
 
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
-    const video = videoRef.current;
+    const video = adPlaying ? adVideoRef.current : videoRef.current;
     if (!video) return;
 
     video.volume = newVolume;
@@ -887,6 +1597,8 @@ export function VideoPlayer({
   };
 
   const handleSeek = (value: number[]) => {
+    if (adPlaying || showAdSplash) return;
+
     const newTime = value[0];
     const video = videoRef.current;
     if (!video) return;
@@ -938,7 +1650,7 @@ export function VideoPlayer({
     }
 
     hideControlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) {
+      if (isPlaying && !adPlaying && !showAdSplash) {
         setShowControls(false);
       }
     }, 2000);
@@ -971,7 +1683,7 @@ export function VideoPlayer({
     return () => {
       container.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [isPlaying]);
+  }, [isPlaying, adPlaying, showAdSplash]);
 
   useEffect(() => {
     return () => {
@@ -983,6 +1695,8 @@ export function VideoPlayer({
   }, []);
 
   const skipForward = () => {
+    if (adPlaying || showAdSplash) return;
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -990,6 +1704,8 @@ export function VideoPlayer({
   };
 
   const changePlaybackRate = () => {
+    if (adPlaying || showAdSplash) return;
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -1004,7 +1720,9 @@ export function VideoPlayer({
 
   const handleVideoClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    togglePlay();
+    if (!adPlaying && !showAdSplash) {
+      togglePlay();
+    }
   };
 
   return (
@@ -1014,158 +1732,230 @@ export function VideoPlayer({
       onMouseMove={showControlsTemporarily}
       onClick={handleVideoClick}
     >
+      {/* 🎯 NEW: Ad Splash Screen */}
+      {showAdSplash && (
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-blue-900 to-black flex items-center justify-center z-50">
+          <div className="text-center">
+            <div className="mb-8">
+              <div className="text-yellow-400 text-6xl mb-4">📺</div>
+              <h2 className="text-3xl font-bold text-white mb-2">
+                Video sẽ bắt đầu sau quảng cáo
+              </h2>
+              <p className="text-white/70 text-lg">
+                Quảng cáo có thể bỏ qua sau 10 giây
+              </p>
+            </div>
+
+            <button
+              onClick={handleStartAd}
+              className="bg-red-600 hover:bg-red-700 text-white text-xl font-bold px-12 py-4 rounded-full shadow-2xl transition-all transform hover:scale-105 flex items-center gap-3 mx-auto"
+            >
+              <Play className="w-6 h-6 fill-white" />
+              Bắt đầu xem
+            </button>
+
+            <p className="text-white/50 text-sm mt-6">
+              Bằng cách nhấn "Bắt đầu xem", bạn đồng ý xem quảng cáo trước
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 🎯 Main Video */}
       <video
         ref={videoRef}
         src={videoUrl}
-        className="w-full h-full object-contain cursor-pointer"
+        className={`w-full h-full object-contain cursor-pointer ${
+          adPlaying || showAdSplash ? "hidden" : ""
+        }`}
         playsInline
         onClick={handleVideoClick}
       />
 
-      {isLoading && (
+      {/* 🎯 Ad Video */}
+      <video
+        ref={adVideoRef}
+        className={`w-full h-full object-contain ${
+          !adPlaying || showAdSplash ? "hidden" : ""
+        }`}
+        playsInline
+      />
+
+      {isLoading && !adPlaying && !showAdSplash && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       )}
 
-      {isBuffering && !isLoading && (
+      {isBuffering && !isLoading && !adPlaying && !showAdSplash && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
           <Loader className="w-10 h-10 animate-spin text-primary" />
         </div>
       )}
 
-      <div
-        className={`absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200 ${
-          showControls
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        }`}
-      >
-        <div className="w-full mb-2 pointer-events-auto">
-          <Slider
-            value={[currentTime]}
-            min={0}
-            max={duration || 100}
-            step={0.1}
-            onValueChange={handleSeek}
-            className="cursor-pointer"
-          />
-        </div>
+      {/* 🎯 Ad Overlay UI */}
+      {adPlaying && !showAdSplash && (
+        <>
+          {/* Ad badge and time */}
+          <div className="absolute top-4 left-4 flex items-center gap-2 z-20">
+            <div className="bg-yellow-400 text-black px-2 py-1 rounded text-xs font-bold">
+              Ad
+            </div>
+            <div className="text-white text-sm bg-black/60 px-2 py-1 rounded">
+              {formatTime(adDuration - adTime)}
+            </div>
+          </div>
 
-        <div className="flex items-center justify-between pointer-events-auto">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePlay();
-              }}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
-            >
-              {isPlaying ? (
-                <Pause className="w-5 h-5 text-white" />
-              ) : (
-                <Play className="w-5 h-5 text-white" />
-              )}
-            </button>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                skipForward();
-              }}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
-            >
-              <SkipForward className="w-5 h-5 text-white" />
-            </button>
-
-            <div className="flex items-center">
+          {/* Skip button */}
+          <div className="absolute bottom-24 right-4 z-20">
+            {canSkipAd ? (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleMute();
+                  handleSkipAd();
+                }}
+                className="group/skip bg-black/80 hover:bg-black text-white pl-3 pr-2 py-2 rounded text-sm font-medium transition-all flex items-center gap-1"
+              >
+                <span>Skip Ad</span>
+                <div className="w-8 h-8 flex items-center justify-center bg-white/20 group-hover/skip:bg-white/30 rounded-sm">
+                  <Play className="w-4 h-4 fill-white" />
+                </div>
+              </button>
+            ) : (
+              <div className="bg-black/80 text-white px-3 py-2 rounded text-sm">
+                Skip in {Math.ceil(AD_CONFIG.skipAfterSeconds - adTime)}s
+              </div>
+            )}
+          </div>
+
+          {/* Ad clickable area */}
+          <a
+            href={AD_CONFIG.clickUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute inset-0 cursor-pointer z-10"
+            onClick={(e) => {
+              console.log("Ad clicked");
+            }}
+          />
+        </>
+      )}
+
+      {/* 🎯 Video controls */}
+      {!adPlaying && !showAdSplash && (
+        <div
+          className={`absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200 ${
+            showControls
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
+          }`}
+        >
+          <div className="w-full mb-2 pointer-events-auto">
+            <Slider
+              value={[currentTime]}
+              min={0}
+              max={duration || 100}
+              step={0.1}
+              onValueChange={handleSeek}
+              className="cursor-pointer"
+            />
+          </div>
+
+          <div className="flex items-center justify-between pointer-events-auto">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlay();
                 }}
                 className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
               >
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="w-5 h-5 text-white" />
+                {isPlaying ? (
+                  <Pause className="w-5 h-5 text-white" />
                 ) : (
-                  <Volume2 className="w-5 h-5 text-white" />
+                  <Play className="w-5 h-5 text-white" />
                 )}
               </button>
 
-              <div className="w-20 hidden sm:block">
-                <Slider
-                  value={[isMuted ? 0 : volume]}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  onValueChange={handleVolumeChange}
-                  onClick={(e) => e.stopPropagation()}
-                />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  skipForward();
+                }}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+              >
+                <SkipForward className="w-5 h-5 text-white" />
+              </button>
+
+              <div className="flex items-center">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleMute();
+                  }}
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+                >
+                  {isMuted || volume === 0 ? (
+                    <VolumeX className="w-5 h-5 text-white" />
+                  ) : (
+                    <Volume2 className="w-5 h-5 text-white" />
+                  )}
+                </button>
+
+                <div className="w-20 hidden sm:block">
+                  <Slider
+                    value={[isMuted ? 0 : volume]}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    onValueChange={handleVolumeChange}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+
+              <div className="text-white text-xs ml-2">
+                <span>{formatTime(currentTime)}</span>
+                <span className="mx-1">/</span>
+                <span>{formatTime(duration)}</span>
               </div>
             </div>
 
-            <div className="text-white text-xs ml-2">
-              <span>{formatTime(currentTime)}</span>
-              <span className="mx-1">/</span>
-              <span>{formatTime(duration)}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  changePlaybackRate();
+                }}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+              >
+                <span className="text-white text-xs font-medium">
+                  {playbackRate}x
+                </span>
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+              >
+                <Settings className="w-5 h-5 text-white" />
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFullscreen();
+                }}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
+              >
+                <Maximize className="w-5 h-5 text-white" />
+              </button>
             </div>
-
-           
-            {/* {duration > 0 && (
-              <div className="ml-4 text-xs">
-                {displayIsValidView ? (
-                  <span className="text-green-400">✅ View Counted</span>
-                ) : (
-                  <span className="text-yellow-400">
-                    ⏱️{" "}
-                    {Math.ceil(
-                      Math.max(
-                        0,
-                        Math.min(30, duration * 0.3) - displayWatchTime
-                      )
-                    )}
-                    s more (watched: {displayWatchTime}s)
-                  </span>
-                )}
-              </div>
-            )} */}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                changePlaybackRate();
-              }}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
-            >
-              <span className="text-white text-xs font-medium">
-                {playbackRate}x
-              </span>
-            </button>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
-            >
-              <Settings className="w-5 h-5 text-white" />
-            </button>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleFullscreen();
-              }}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10"
-            >
-              <Maximize className="w-5 h-5 text-white" />
-            </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

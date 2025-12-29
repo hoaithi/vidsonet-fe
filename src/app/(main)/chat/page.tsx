@@ -35,6 +35,7 @@ import IncomingCallNotification from "@/components/video-call/IncomingCallNotifi
 import { ImagePreview } from "@/components/chat-detail/ChatDetailModal";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { toast } from "sonner";
 
 // ✅ Image Preview Item Component
 function ImagePreviewItem({
@@ -406,8 +407,7 @@ export default function ChatPage() {
     const files = Array.from(e.target.files || []);
 
     if (files.length + selectedImages.length > 10) {
-      setError("Chỉ có thể gửi tối đa 10 ảnh");
-      setTimeout(() => setError(null), 3000);
+      toast("Chỉ có thể gửi tối đa 10 ảnh");
       return;
     }
 
@@ -437,7 +437,7 @@ export default function ChatPage() {
     try {
       return await chatService.uploadChatImages(files);
     } catch (error) {
-      console.error("❌ Upload error:", error);
+      toast(`❌ Upload error: ${error}`);
       throw error;
     }
   };
