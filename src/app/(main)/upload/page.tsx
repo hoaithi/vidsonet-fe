@@ -15,7 +15,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuthStore } from '@/store/auth-store';
 import { videoUploadSchema } from '@/lib/validation';
 import { useVideos } from '@/lib/hooks/use-videos';
-import { Category } from '@/types/video';
 import { getLocalStorage } from '@/lib/utils';
 import VideoFileUploader from '@/components/video/video-file-uploader';
 import { VideoDetailsForm } from '@/components/video/video-details-form';
@@ -25,7 +24,6 @@ export default function UploadVideoPage() {
   const router = useRouter();
   const { uploadVideo } = useVideos();
   const [isUploading, setIsUploading] = useState(false);
-  // const [uploadProgress, setUploadProgress] = useState(0);
 
   // Redirect if not authenticated
   useEffect(() => {

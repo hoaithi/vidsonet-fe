@@ -10,9 +10,14 @@ export default function VideoFileUploader({form, isUploading}:any){
 
     const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if(file){
-            form.setValue('videoFile', file, {shouldValidate: true});
-            setVideoPreview(URL.createObjectURL(file))
+        if (file) {
+            const maxFileSize = 500 * 1024 * 1024; // 500MB in bytes
+            if (file.size > maxFileSize) {
+                alert('File size exceeds the 500MB limit.');
+                return;
+            }
+            form.setValue('videoFile', file, { shouldValidate: true });
+            setVideoPreview(URL.createObjectURL(file));
         }
     };
 

@@ -22,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="mdl-js">
+    <html lang="en" className="mdl-js" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
         <SocketProvider>
           {children}
