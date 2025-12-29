@@ -407,20 +407,20 @@ export default function ExplorePage() {
   const [hasMore, setHasMore] = useState(true);
 
   // Fetch categories on mount
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await CategoryService.getAllCategories();
-        if (response.result) {
-          setCategories(response.result);
-        }
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchCategories = async () => {
+  //     try {
+  //       const response = await CategoryService.getAllCategories();
+  //       if (response.result) {
+  //         setCategories(response.result);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching categories:", error);
+  //     }
+  //   };
 
-    fetchCategories();
-  }, []);
+  //   fetchCategories();
+  // }, []);
 
   // Initial search based on URL params
   useEffect(() => {

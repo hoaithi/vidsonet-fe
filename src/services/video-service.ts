@@ -7,6 +7,9 @@ import {
   VideoSearchRequest,
   Comment,
   CommentCreateRequest,
+  ViewTrackingRequest,
+  ViewProgressRequest,
+  ViewStatsResponse,
 } from "@/types/video";
 import { PaginatedResponse } from "@/types/api";
 
@@ -224,5 +227,93 @@ export const VideoService = {
       params: { userId },
     });
     return response.data;
+  },
+
+
+    /**
+   * Record valid view - gọi khi đạt ngưỡng xem hợp lệ
+   * (30s OR 30% OR interaction)
+   */
+  recordValidView: async (
+    videoId: string,
+    data: ViewTrackingRequest
+  ): Promise<void> => {
+    try {
+      await apiClient.post(`/video/${videoId}/valid-view`, data);
+      console.log("✅ Valid view recorded for video:", videoId);
+    } catch (error) {
+      console.error("❌ Error recording valid view:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update view progress - gọi định kỳ trong quá trình xem
+   * (mỗi 10% hoặc mỗi 5 giây)
+   */
+  updateViewProgress: async (
+    videoId: string,
+    data: ViewProgressRequest
+  ): Promise<void> => {
+    try {
+      await apiClient.post(`/video/${videoId}/view-progress`, data);
+      console.log("📊 View progress updated:", data.watchPercentage + "%");
+    } catch (error) {
+      console.error("❌ Error updating view progress:", error);
+      // Don't throw - progress updates are not critical
+    }
+  },
+
+  /**
+   * Mark interaction - gọi khi user like/comment/share
+   * Tự động count valid view ngay lập tức
+   */
+  markInteraction: async (videoId: string, sessionId: string): Promise<void> => {
+    try {
+      await apiClient.post(`/video/${videoId}/mark-interaction`, null, {
+        params: { sessionId },
+      });
+      console.log("🎯 Interaction marked for video:", videoId);
+    } catch (error) {
+      console.error("❌ Error marking interaction:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get detailed view statistics
+   */
+  getViewStats: async (videoId: string): Promise<ViewStatsResponse> => {
+    try {
+      const response = await apiClient.get(`/video/${videoId}/view-stats`);
+      return response.data.result;
+    } catch (error) {
+      console.error("❌ Error getting view stats:", error);
+      throw error;
+    }
+  },
+
+  // ============================================
+  // 🎯 HELPER FUNCTIONS
+  // ============================================
+
+  /**
+   * Generate unique session ID
+   */
+  generateSessionId: (): string => {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  },
+
+  /**
+   * Check if view is valid according to YouTube standards
+   * Returns true if: watched 30s OR 30% OR user interacted
+   */
+  checkValidView: (currentTime: number, duration: number): boolean => {
+    if (!duration || duration === 0) return false;
+
+    const watchPercentage = (currentTime / duration) * 100;
+    const minWatchTime = Math.min(30, duration * 0.3); // 30s OR 30% of video
+
+    return currentTime >= minWatchTime || watchPercentage >= 30;
   },
 };

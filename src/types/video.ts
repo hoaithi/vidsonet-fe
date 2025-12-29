@@ -93,3 +93,26 @@ export interface UserReactionStatus {
   hasLiked: boolean;
   hasDisliked: boolean;
 }
+
+
+export interface ViewTrackingRequest {
+  sessionId: string;
+  watchDuration: number;
+  watchPercentage: number;
+  hasInteracted?: boolean;
+}
+
+export interface ViewProgressRequest {
+  sessionId: string;
+  watchDuration: number;
+  watchPercentage: number;
+}
+
+export interface ViewStatsResponse {
+  totalViews: number;
+  validViews: number;
+  uniqueViewers: number;
+  averageWatchPercentage: number;
+  totalWatchDuration: number;
+  validViewRate: number;
+}
